@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameStateBase.h"
+#include "GameFramework/GameState.h"
 #include "TACGameState.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TAC13_API ATACGameState : public AGameStateBase
+class TAC13_API ATACGameState : public AGameState
 {
 	GENERATED_BODY()
 	

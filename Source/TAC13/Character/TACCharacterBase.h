@@ -13,17 +13,13 @@ class TAC13_API ATACCharacterBase : public ACharacter
 
 public:
 	// Sets default values for this character's properties
-	ATACCharacterBase();
+	ATACCharacterBase(const FObjectInitializer& ObjectInitializer);
 
+	virtual void PostInitializeComponents() override;
+	
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	virtual void SetCharacterControlData(const class UTACControlData* CharacterControlData);
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+	UPROPERTY(EditAnywhere, Category = CharacterControl, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UTACControlData> CurrentControlData;
 };

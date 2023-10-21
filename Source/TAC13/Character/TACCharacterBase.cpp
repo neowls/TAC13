@@ -2,33 +2,31 @@
 
 
 #include "TACCharacterBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Input/TACControlData.h"
 
 // Sets default values
-ATACCharacterBase::ATACCharacterBase()
+ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
-}
-
-// Called when the game starts or when spawned
-void ATACCharacterBase::BeginPlay()
-{
-	Super::BeginPlay();
+	static ConstructorHelpers::FObjectFinder<UTACControlData> ControlDataRef(TEXT("/Script/TAC13.TACControlData'/Game/_TAC/Input/DA_Character.DA_Character'"));
+	if (nullptr != ControlDataRef.Object)
+	{
+		CurrentControlData = ControlDataRef.Object;
+	}
 	
 }
 
-// Called every frame
-void ATACCharacterBase::Tick(float DeltaTime)
+void ATACCharacterBase::PostInitializeComponents()
 {
-	Super::Tick(DeltaTime);
-
+	Super::PostInitializeComponents();
 }
 
-// Called to bind functionality to input
-void ATACCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void ATACCharacterBase::SetCharacterControlData(const UTACControlData* CharacterControlData)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	bUseControllerRotationYaw = CharacterControlData->bUseControllerRotationYaw;
 
+	GetCharacterMovement()->bOrientRotationToMovement = CharacterControlData->bOrientRotationToMovement;
+	GetCharacterMovement()->bUseControllerDesiredRotation = CharacterControlData->bUseControllerDesiredRotation;
+	GetCharacterMovement()->RotationRate = CharacterControlData->RotationRate;
 }
-

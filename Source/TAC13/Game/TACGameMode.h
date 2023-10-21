@@ -3,15 +3,24 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameModeBase.h"
+#include "GameFramework/GameMode.h"
 #include "TACGameMode.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TAC13_API ATACGameMode : public AGameModeBase
+class TAC13_API ATACGameMode : public AGameMode
 {
 	GENERATED_BODY()
+
+public:
+	ATACGameMode();
+
+	virtual void StartPlay() override;
 	
+protected:
+	virtual void PostInitializeComponents() override;
+
+protected:
 };

@@ -3,3 +3,7 @@
 
 #include "TACControlData.h"
 
+UTACControlData::UTACControlData()
+{
+	TargetArmLength = 200.f;
+}
