@@ -27,37 +27,37 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<class ATACCharacterPlayer> Character;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	float Direction;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	float GroundSpeed;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	float AimingAlpha;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	double AimPitch;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	FVector Velocity;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	uint8 bIsMoving : 1;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	uint8 bIsSprint : 1;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	uint8 bIsJumping : 1;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	uint8 bIsFalling : 1;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	uint8 bIsAiming : 1;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	uint8 bInterpAiming : 1;
 
 	UPROPERTY(BlueprintReadOnly)

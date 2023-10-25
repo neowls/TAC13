@@ -26,7 +26,40 @@ public:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void FireHitCheck() override;
+	void FireHitConfirm(AActor* HitActor);
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	void PlayFireAnimation();
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPCFire(float FireStartTime);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastRPCFire();
+
+	UFUNCTION(Client, Unreliable)
+	void ClientRPCPlayerAnimation(ATACCharacterPlayer* CharacterToPlay);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPCNotifyHit(const FHitResult& HitResult, float HitCheckTime);
+
+	UPROPERTY(ReplicatedUsing = OnRep_CanFire)
+	uint8 bCanFire : 1;
+
+	UFUNCTION()
+	void OnRep_CanFire();
+
+	float FireTime = 0.1f;
+	float LastFireStartTime = 0.0f;
+	float FireTimeDifference = 0.0f;
+	float AcceptMinCheckTime = 0.1f;
+
+public:
+	void ResetFire();
+	
+	FTimerHandle FireTimerHandle;
+	
 #pragma region Input
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
@@ -72,7 +105,7 @@ protected:
 	void Aim(const FInputActionValue& Value);
 	void Sprint(const FInputActionValue& Value);
 	void Sneak(const FInputActionValue& Value);
-	void Crouch();
+	void TryCrouch();
 	void Prone();
 	void Melee();
 	void ChangeFireMode();
@@ -82,12 +115,9 @@ protected:
 	virtual void SetCharacterControlData(const UTACControlData* CharacterControlData) override;
 #pragma endregion
 
-#pragma region CAMERA
+#pragma region Mesh
 	
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-	TObjectPtr<class UCameraComponent> Camera;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> ArmMesh;
 

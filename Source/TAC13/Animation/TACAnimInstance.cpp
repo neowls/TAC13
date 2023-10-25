@@ -29,6 +29,8 @@ void UTACAnimInstance::NativeBeginPlay()
 void UTACAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
+	if(!Character) return;
+	SetMovement();
 }
 
 void UTACAnimInstance::SetMovement()
@@ -37,7 +39,7 @@ void UTACAnimInstance::SetMovement()
 	GroundSpeed = Velocity.Size2D();
 	bIsMoving = GroundSpeed > 1.f;
 	bIsSprint = false;
-	Direction = UKismetAnimationLibrary::CalculateDirection(Character->GetVelocity(), Character->GetActorRotation());
+	Direction = UKismetAnimationLibrary::CalculateDirection(Velocity, Character->GetActorRotation());
 	bIsFalling = Character->GetCharacterMovement()->IsFalling();
 	bIsJumping = bIsFalling & (Velocity.Z > 100.f);
 	AimPitch = Character->GetBaseAimRotation().GetNormalized().Pitch;

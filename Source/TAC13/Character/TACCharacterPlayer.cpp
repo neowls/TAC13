@@ -5,10 +5,16 @@
 #include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "TAC13.h"
 #include "TACCharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Chaos/Utilities.h"
+#include "Engine/DamageEvents.h"
+#include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Input/TACControlData.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 #define CONSTRUCT_IA ConstructorHelpers::FObjectFinder<UInputAction>
 
@@ -63,17 +69,11 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 86.0f);
 	GetCapsuleComponent()->SetCollisionProfileName(TEXT("Pawn"));
 	
-	//	Camera Section
-	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(GetCapsuleComponent());
-	Camera->SetRelativeLocation(FVector(0.f,0.f,80.f));
-	Camera->bUsePawnControlRotation = true;
-	
 	// Arm Mesh Section
 	ArmMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Arm"));
 	ArmMesh->SetOnlyOwnerSee(true);
 	ArmMesh->SetOwnerNoSee(false);
-	ArmMesh->SetupAttachment(Camera);
+	ArmMesh->SetupAttachment(GetCameraComponent());
 	ArmMesh->bCastDynamicShadow = false;
 	ArmMesh->CastShadow = false;
 	ArmMesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
@@ -99,10 +99,11 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 45.0f, 0.0f);
 	GetCharacterMovement()->JumpZVelocity = 700.0f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.0f;
+	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.0f;
-	
+
+	bCanFire = true;
 }
 
 void ATACCharacterPlayer::BeginPlay()
@@ -131,16 +132,156 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Aim);
 	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Look);
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Move);
-	EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Crouch);
 	EnhancedInputComponent->BindAction(ProneAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Prone);
 	EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Sneak);
 	EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Sprint);
 	EnhancedInputComponent->BindAction(MeleeAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Melee);
 	EnhancedInputComponent->BindAction(LeaningAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Leaning);
+	EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::TryCrouch);
 	EnhancedInputComponent->BindAction(ChangeFireModeAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::ChangeFireMode);
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+}
+
+void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ATACCharacterPlayer, bCanFire);
+}
+
+void ATACCharacterPlayer::FireHitCheck()
+{
+	if(IsLocallyControlled())
+	{
+		TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
+		FHitResult OutHitResult;
+		const FVector Start = Camera->GetComponentLocation();
+		const FVector End = Start + Camera->GetForwardVector() * 10000.0f;
+		const TArray<AActor*> ActorsToIgnore;
+		
+		const bool bHit = UKismetSystemLibrary::LineTraceSingle(this, Start, End, UEngineTypes::ConvertToTraceType(ECC_Visibility),
+			true, ActorsToIgnore, EDrawDebugTrace::ForDuration, OutHitResult, true, FLinearColor::Yellow, FLinearColor::Green, 2.0f);
+		float HitCheckTime = GetWorld()->GetGameState()->GetServerWorldTimeSeconds();
+		if(!HasAuthority())
+		{
+			if(bHit)
+			{
+				ServerRPCNotifyHit(OutHitResult, HitCheckTime);
+			}
+			else
+			{
+				//NotifyMiss
+			}
+		}
+		else
+		{
+			if(bHit)
+			{
+				TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Hit"));
+				GEngine->AddOnScreenDebugMessage(5, 2.0f, FColor::Yellow, FString::Printf(TEXT("Trace Hit : %s"), *OutHitResult.GetActor()->GetName()));
+				GEngine->AddOnScreenDebugMessage(6, 2.0f, FColor::Red, FString::Printf(TEXT("Hit BoneName : %s"), *OutHitResult.BoneName.ToString()));
+				FireHitConfirm(OutHitResult.GetActor());
+			}
+		}
+		TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
+	}
+}
+
+void ATACCharacterPlayer::FireHitConfirm(AActor* HitActor)
+{
+	if(HasAuthority())
+	{
+		const float FireDamage = 0.f;
+		FDamageEvent DamageEvent;
+		HitActor->TakeDamage(FireDamage, DamageEvent, GetController(), this);
+	}
+}
+
+float ATACCharacterPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Player Damage Taken"));
+	return ActualDamage;
+}
+
+void ATACCharacterPlayer::PlayFireAnimation()
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	UAnimInstance* MeshAnimInstance = GetMesh()->GetAnimInstance();
 	
+	MeshAnimInstance->StopAllMontages(0.0f);
+	MeshAnimInstance->Montage_Play(FireCosmeticMontage);
+
+	ArmMesh->GetAnimInstance()->StopAllMontages(0.0f);
+	ArmMesh->GetAnimInstance()->Montage_Play(FireArmMontage);
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
+}
+
+void ATACCharacterPlayer::ServerRPCFire_Implementation(float FireStartTime)
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	bCanFire = false;
+
+	FireTimeDifference = GetWorld()->GetTimeSeconds() - FireStartTime;
+	FireTimeDifference = FMath::Clamp(FireTimeDifference, 0.0f, FireTime - 0.01f);
+
+	GetWorldTimerManager().SetTimer(FireTimerHandle, this, &ATACCharacterPlayer::ResetFire, FireTime - FireTimeDifference, false);
+
+	LastFireStartTime = FireStartTime;
+	PlayFireAnimation();
+
+	MulticastRPCFire();
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
+}
+
+bool ATACCharacterPlayer::ServerRPCFire_Validate(float FireStartTime)
+{
+	return true;
+}
+
+void ATACCharacterPlayer::MulticastRPCFire_Implementation()
+{
+	if(!IsLocallyControlled())
+	{
+		PlayFireAnimation();
+	}
+}
+
+void ATACCharacterPlayer::ClientRPCPlayerAnimation_Implementation(ATACCharacterPlayer* CharacterToPlay)
+{
+}
+
+void ATACCharacterPlayer::ServerRPCNotifyHit_Implementation(const FHitResult& HitResult, float HitCheckTime)
+{
+	AActor* HitActor = HitResult.GetActor();
+	if(::IsValid(HitActor))
+	{
+		const float DotValue = GetDotProductTo(HitActor);
+		TAC_LOG(LogTACNetwork, Log, TEXT("%f"), DotValue);
+		if(DotValue > 0.0f)
+		{
+			FireHitConfirm(HitActor);
+		}
+		//TAC_LOG(LogTACNetwork, Warning, TEXT("%s"), TEXT("Hit Test Failed"));
+	}
+}
+
+bool ATACCharacterPlayer::ServerRPCNotifyHit_Validate(const FHitResult& HitResult, float HitCheckTime)
+{
+	return (HitCheckTime - LastFireStartTime) < AcceptMinCheckTime;
+}
+
+void ATACCharacterPlayer::OnRep_CanFire()
+{
+	
+}
+
+void ATACCharacterPlayer::ResetFire()
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	bCanFire = true;
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
 void ATACCharacterPlayer::SetCharacterControl()
@@ -194,7 +335,18 @@ void ATACCharacterPlayer::Look(const FInputActionValue& Value)
 
 void ATACCharacterPlayer::Fire(const FInputActionValue& Value)
 {
-	
+	if(bCanFire)
+	{
+		TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
+		if(!HasAuthority())
+		{
+			bCanFire = false;
+			GetWorldTimerManager().SetTimer(FireTimerHandle, this, &ATACCharacterPlayer::ResetFire, FireTime, false);
+			PlayFireAnimation();
+		}
+		ServerRPCFire(GetWorld()->GetGameState()->GetServerWorldTimeSeconds());
+		TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
+	}
 }
 
 void ATACCharacterPlayer::Aim(const FInputActionValue& Value)
@@ -212,9 +364,9 @@ void ATACCharacterPlayer::Sneak(const FInputActionValue& Value)
 	
 }
 
-void ATACCharacterPlayer::Crouch()
+void ATACCharacterPlayer::TryCrouch()
 {
-	
+	Crouch(false);
 }
 
 void ATACCharacterPlayer::Prone()

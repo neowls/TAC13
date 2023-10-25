@@ -19,7 +19,7 @@ struct FTACWeaponStat : public FTableRowBase
 	GENERATED_BODY()
 
 public:
-	//FTACWeaponStat();
+	FTACWeaponStat() : Damage(0.0f), FireRate(0.0f), Recoil(0.0f), Ergonomics(0.0f), MaxAmmo(0) {};
 
 	UPROPERTY()
 	TArray<EFireMode> OwnFireMode;

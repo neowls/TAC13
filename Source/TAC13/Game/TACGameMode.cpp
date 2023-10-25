@@ -8,7 +8,7 @@
 
 ATACGameMode::ATACGameMode()
 {
-	static ConstructorHelpers::FClassFinder<APawn> DefaultPawnClassRef(TEXT("/Script/Engine.Blueprint'/Game/_Dev/Character/BP_TACCharacterPlayer.BP_TACCharacterPlayer_C'"));
+	static ConstructorHelpers::FClassFinder<APawn> DefaultPawnClassRef(TEXT("/Script/Engine.Blueprint'/Game/_TAC/Character/BP_TACCharacterPlayer.BP_TACCharacterPlayer_C'"));
 	if (DefaultPawnClassRef.Class)
 	{
 		DefaultPawnClass = DefaultPawnClassRef.Class;
