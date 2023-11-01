@@ -14,6 +14,7 @@ UTACAnimInstance::UTACAnimInstance()
 	bIsFalling = false;
 	bIsAiming = false;
 	bInterpAiming = false;
+	bIsCrouching = false;
 }
 
 void UTACAnimInstance::NativeBeginPlay()
@@ -39,6 +40,7 @@ void UTACAnimInstance::SetMovement()
 	GroundSpeed = Velocity.Size2D();
 	bIsMoving = GroundSpeed > 1.f;
 	bIsSprint = false;
+	bIsCrouching = Character->bIsCrouched;
 	Direction = UKismetAnimationLibrary::CalculateDirection(Velocity, Character->GetActorRotation());
 	bIsFalling = Character->GetCharacterMovement()->IsFalling();
 	bIsJumping = bIsFalling & (Velocity.Z > 100.f);

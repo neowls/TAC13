@@ -3,15 +3,17 @@
 
 #include "TACCharacterBase.h"
 
+#include "TACCharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UTACCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	static ConstructorHelpers::FObjectFinder<UTACControlData> ControlDataRef(TEXT("/Script/TAC13.TACControlData'/Game/_TAC/Input/DA_Character.DA_Character'"));
 	if (nullptr != ControlDataRef.Object)
@@ -38,6 +40,16 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	Camera->SetRelativeLocation(FVector(0.f,0.f,80.f));
 	Camera->bUsePawnControlRotation = true;
 	
+	//	Movement Section
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 45.0f, 0.0f);
+	GetCharacterMovement()->JumpZVelocity = 700.0f;
+	GetCharacterMovement()->AirControl = 0.35f;
+	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
+	GetCharacterMovement()->MinAnalogWalkSpeed = 20.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 2000.0f;
+	TACCharacterMovement = Cast<UTACCharacterMovementComponent>(GetCharacterMovement());
+	PronedEyeHeight = 30.f;
 }
 
 void ATACCharacterBase::PostInitializeComponents()
@@ -52,6 +64,13 @@ void ATACCharacterBase::SetCharacterControlData(const UTACControlData* Character
 	GetCharacterMovement()->bOrientRotationToMovement = CharacterControlData->bOrientRotationToMovement;
 	GetCharacterMovement()->bUseControllerDesiredRotation = CharacterControlData->bUseControllerDesiredRotation;
 	GetCharacterMovement()->RotationRate = CharacterControlData->RotationRate;
+}
+
+void ATACCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME_CONDITION(ThisClass, bIsProned, COND_SimulatedOnly);
 }
 
 void ATACCharacterBase::FireHitCheck()
@@ -70,4 +89,98 @@ void ATACCharacterBase::FireHitCheck()
 		GEngine->AddOnScreenDebugMessage(5, 2.0f, FColor::Yellow, FString::Printf(TEXT("Trace Hit : %s"), *HitResult.GetActor()->GetName()));
 		GEngine->AddOnScreenDebugMessage(6, 2.0f, FColor::Red, FString::Printf(TEXT("Hit BoneName : %s"), *HitResult.BoneName.ToString()));
 	}
+}
+
+void ATACCharacterBase::RecalculateBaseEyeHeight()
+{
+	if (bIsProned)
+	{
+		BaseEyeHeight = PronedEyeHeight;
+	}
+	else
+	{
+		Super::RecalculateBaseEyeHeight();
+	}
+}
+
+void ATACCharacterBase::OnRep_IsProned()
+{
+	if (TACCharacterMovement)
+	{
+		if (bIsProned)
+		{
+			TACCharacterMovement->bWantsToProne = true;
+			TACCharacterMovement->Prone(true);
+		}
+		else
+		{
+			TACCharacterMovement->bWantsToProne = false;
+			TACCharacterMovement->UnProne(true);
+		}
+		TACCharacterMovement->bNetworkUpdateReceived = true;
+	}
+}
+
+void ATACCharacterBase::Prone(bool bClientSimulation)
+{
+	if (TACCharacterMovement)
+	{
+		if (CanProne())
+		{
+			TACCharacterMovement->bWantsToProne = true;
+		}
+	}
+}
+
+void ATACCharacterBase::UnProne(bool bClientSimulation)
+{
+	if (TACCharacterMovement)
+	{
+		TACCharacterMovement->bWantsToProne = false;
+	}
+}
+
+bool ATACCharacterBase::CanProne() const
+{
+	return !bIsProned && GetRootComponent() && !GetRootComponent()->IsSimulatingPhysics();
+}
+
+void ATACCharacterBase::OnEndProne(float HeightAdjust, float ScaledHeightAdjust)
+{
+	RecalculateBaseEyeHeight();
+
+	if (!bIsCrouched)
+	{
+		const ACharacter* DefaultChar = GetDefault<ACharacter>(GetClass());
+		if (GetMesh() && DefaultChar->GetMesh())
+		{
+			FVector& MeshRelativeLocation = GetMesh()->GetRelativeLocation_DirectMutable();
+			MeshRelativeLocation.Z = DefaultChar->GetMesh()->GetRelativeLocation().Z;
+			BaseTranslationOffset.Z = MeshRelativeLocation.Z;
+		}
+		else
+		{
+			BaseTranslationOffset.Z = DefaultChar->GetBaseTranslationOffset().Z;
+		}
+	}
+	K2_OnEndProne(HeightAdjust, ScaledHeightAdjust);
+}
+
+void ATACCharacterBase::OnStartProne(float HeightAdjust, float ScaledHeightAdjust)
+{
+	RecalculateBaseEyeHeight();
+
+	const ACharacter* DefaultChar = GetDefault<ACharacter>(GetClass());
+	if (GetMesh() && DefaultChar->GetMesh())
+	{
+		FVector& MeshRelativeLocation = GetMesh()->GetRelativeLocation_DirectMutable();
+		MeshRelativeLocation.Z = DefaultChar->GetMesh()->GetRelativeLocation().Z + HeightAdjust;
+		BaseTranslationOffset.Z = MeshRelativeLocation.Z;
+	}
+	else
+	{
+		BaseTranslationOffset.Z = DefaultChar->GetBaseTranslationOffset().Z + HeightAdjust;
+	}
+
+	K2_OnStartProne(HeightAdjust, ScaledHeightAdjust);
 }

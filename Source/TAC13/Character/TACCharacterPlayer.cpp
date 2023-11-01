@@ -6,20 +6,17 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "TAC13.h"
-#include "TACCharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
-#include "Chaos/Utilities.h"
 #include "Engine/DamageEvents.h"
 #include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Input/TACControlData.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 #define CONSTRUCT_IA ConstructorHelpers::FObjectFinder<UInputAction>
 
 ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer.SetDefaultSubobjectClass<UTACCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+	: Super(ObjectInitializer)
 {
 		// Input
 	struct FConstructorStatics
@@ -94,15 +91,6 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 
-	//	Movement Section
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 45.0f, 0.0f);
-	GetCharacterMovement()->JumpZVelocity = 700.0f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.0f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2000.0f;
-
 	bCanFire = true;
 }
 
@@ -132,7 +120,7 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Aim);
 	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Look);
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Move);
-	EnhancedInputComponent->BindAction(ProneAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Prone);
+	EnhancedInputComponent->BindAction(ProneAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::TryProne);
 	EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Sneak);
 	EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Sprint);
 	EnhancedInputComponent->BindAction(MeleeAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Melee);
@@ -250,6 +238,7 @@ void ATACCharacterPlayer::MulticastRPCFire_Implementation()
 
 void ATACCharacterPlayer::ClientRPCPlayerAnimation_Implementation(ATACCharacterPlayer* CharacterToPlay)
 {
+	
 }
 
 void ATACCharacterPlayer::ServerRPCNotifyHit_Implementation(const FHitResult& HitResult, float HitCheckTime)
@@ -273,6 +262,11 @@ bool ATACCharacterPlayer::ServerRPCNotifyHit_Validate(const FHitResult& HitResul
 }
 
 void ATACCharacterPlayer::OnRep_CanFire()
+{
+	
+}
+
+void ATACCharacterPlayer::OnRep_IsProne()
 {
 	
 }
@@ -366,12 +360,14 @@ void ATACCharacterPlayer::Sneak(const FInputActionValue& Value)
 
 void ATACCharacterPlayer::TryCrouch()
 {
-	Crouch(false);
+	if(bIsCrouched) UnCrouch(false);
+	else Crouch();
 }
 
-void ATACCharacterPlayer::Prone()
+void ATACCharacterPlayer::TryProne()
 {
-	
+	if(bIsProned) UnProne();
+	else Prone();
 }
 
 void ATACCharacterPlayer::Leaning(const FInputActionValue& Value)

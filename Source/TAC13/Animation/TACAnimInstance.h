@@ -46,6 +46,9 @@ public:
 	uint8 bIsMoving : 1;
 
 	UPROPERTY(BlueprintReadOnly)
+	uint8 bIsCrouching : 1;
+
+	UPROPERTY(BlueprintReadOnly)
 	uint8 bIsSprint : 1;
 
 	UPROPERTY(BlueprintReadOnly)
