@@ -32,8 +32,6 @@ protected:
 	
 #pragma region Prone
 public:
-	UPROPERTY(Category="Character Movement (General Settings)", VisibleInstanceOnly, BlueprintReadOnly)
-	uint8 bWantToProne:1;
 	/** Max Acceleration (rate of change of velocity) */
 	UPROPERTY(Category="Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, meta=(ClampMin="0", UIMin="0"))
 	float MaxAccelerationProned;

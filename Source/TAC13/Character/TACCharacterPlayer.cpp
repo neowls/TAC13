@@ -266,10 +266,6 @@ void ATACCharacterPlayer::OnRep_CanFire()
 	
 }
 
-void ATACCharacterPlayer::OnRep_IsProne()
-{
-	
-}
 
 void ATACCharacterPlayer::ResetFire()
 {

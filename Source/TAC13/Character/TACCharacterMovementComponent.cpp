@@ -29,21 +29,21 @@ void UTACCharacterMovementComponent::UnCrouch(bool bClientSimulation)
 
 bool UTACCharacterMovementComponent::HasValidData() const
 {
-	return Super::HasValidData() && IsValid(CharacterOwner);
+	return Super::HasValidData() && IsValid(TACCharacter);
 }
 
 void UTACCharacterMovementComponent::PostLoad()
 {
 	Super::PostLoad();
 
-	TACCharacter = Cast<ATACCharacterBase>(CharacterOwner);
+	TACCharacter = Cast<ATACCharacterBase>(PawnOwner);
 }
 
 void UTACCharacterMovementComponent::SetUpdatedComponent(USceneComponent* NewUpdatedComponent)
 {
 	Super::SetUpdatedComponent(NewUpdatedComponent);
 
-	TACCharacter = Cast<ATACCharacterBase>(CharacterOwner);
+	TACCharacter = Cast<ATACCharacterBase>(PawnOwner);
 }
 
 float UTACCharacterMovementComponent::GetMaxAcceleration() const
@@ -131,7 +131,7 @@ float UTACCharacterMovementComponent::GetTimestamp() const
 
 bool UTACCharacterMovementComponent::IsProned() const
 {
-	return CharacterOwner && TACCharacter->bIsProned;
+	return TACCharacter && TACCharacter->bIsProned;
 }
 
 void UTACCharacterMovementComponent::Prone(bool bClientSimulation)
@@ -265,7 +265,7 @@ void UTACCharacterMovementComponent::UnProne(bool bClientSimulation)
 		return;
 	}
 
-	ATACCharacterPlayer* DefaultCharacter = CharacterOwner->GetClass()->GetDefaultObject<ATACCharacterPlayer>();
+	ATACCharacterBase* DefaultCharacter = CharacterOwner->GetClass()->GetDefaultObject<ATACCharacterBase>();
 
 	// See if collision is already at desired size.
 	if (CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() &&
@@ -498,15 +498,15 @@ void FSavedMove_Character_Prone::SetMoveFor(ACharacter* C, float InDeltaTime, FV
 {
 	Super::SetMoveFor(C, InDeltaTime, NewAccel, ClientData);
 
-	bWantsToProne = Cast<ATACCharacterPlayer>(C)->GetTACCharacterMovement()->bWantsToProne;
-	bProneLocked = Cast<ATACCharacterPlayer>(C)->GetTACCharacterMovement()->bProneLocked;
+	bWantsToProne = Cast<ATACCharacterBase>(C)->GetTACCharacterMovement()->bWantsToProne;
+	bProneLocked = Cast<ATACCharacterBase>(C)->GetTACCharacterMovement()->bProneLocked;
 }
 
 void FSavedMove_Character_Prone::PrepMoveFor(ACharacter* C)
 {
 	Super::PrepMoveFor(C);
 
-	Cast<ATACCharacterPlayer>(C)->GetTACCharacterMovement()->bProneLocked = bProneLocked;
+	Cast<ATACCharacterBase>(C)->GetTACCharacterMovement()->bProneLocked = bProneLocked;
 }
 
 uint8 FSavedMove_Character_Prone::GetCompressedFlags() const
