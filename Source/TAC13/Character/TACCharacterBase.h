@@ -49,23 +49,26 @@ protected:
 // Prone Section	
 	#pragma region Prone
 	private:
-	
 	/** Movement component used for movement logic in various movement modes (walking, falling, etc), containing relevant settings and functions to control movement. */
 	UPROPERTY(Category=Character, VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<UTACCharacterMovementComponent> TACCharacterMovement;
 
 	friend class FSavedMove_Character_Prone;
 protected:
-	FORCEINLINE UTACCharacterMovementComponent* GetTACCharacterMovement() const { return TACCharacterMovement; }
+	FORCEINLINE UTACCharacterMovementComponent* GetProneCharacterMovement() const { return TACCharacterMovement; }
 
 public:
 	/** Default proned eye height */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Camera)
 	float PronedEyeHeight;
-
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsProned, Category=Character)
-	uint32 bIsProned : 1;
-
+	
+public:
+	/** Set by character movement to specify that this Character is currently Proned. */
+	UPROPERTY(BlueprintReadOnly, replicatedUsing=OnRep_IsProned, Category=Character)
+	uint32 bIsProned:1;
+	
+public:
+	
 public:
 	virtual void RecalculateBaseEyeHeight() override;
 
