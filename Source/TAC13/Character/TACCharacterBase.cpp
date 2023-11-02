@@ -32,15 +32,9 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	{
 		FireCosmeticMontage = FireCosmeticMontageRef.Object;
 	}
-
-	
-	//	Camera Section
-	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(GetCapsuleComponent());
-	Camera->SetRelativeLocation(FVector(0.f,0.f,80.f));
-	Camera->bUsePawnControlRotation = true;
 	
 	//	Movement Section
+	TACCharacterMovement = Cast<UTACCharacterMovementComponent>(GetCharacterMovement());
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 45.0f, 0.0f);
 	GetCharacterMovement()->JumpZVelocity = 700.0f;
@@ -48,7 +42,16 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	GetCharacterMovement()->MaxWalkSpeed = 300.0f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.0f;
-	TACCharacterMovement = Cast<UTACCharacterMovementComponent>(GetCharacterMovement());
+
+	//	Camera Section
+	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+	Camera->SetupAttachment(GetCapsuleComponent());
+	CameraStandHeight = 80.f;
+	CameraCrouchedHeight = 54.f;
+	CameraProneHeight = 34.f;
+	Camera->SetRelativeLocation(FVector(0.f,0.f,CameraStandHeight));
+	Camera->bUsePawnControlRotation = true;
+	
 	PronedEyeHeight = 30.f;
 }
 
@@ -71,6 +74,18 @@ void ATACCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME_CONDITION(ThisClass, bIsProned, COND_SimulatedOnly);
+}
+
+void ATACCharacterBase::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraCrouchedHeight));
+}
+
+void ATACCharacterBase::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraStandHeight));
 }
 
 void ATACCharacterBase::FireHitCheck()
@@ -163,6 +178,7 @@ void ATACCharacterBase::OnEndProne(float HeightAdjust, float ScaledHeightAdjust)
 			BaseTranslationOffset.Z = DefaultChar->GetBaseTranslationOffset().Z;
 		}
 	}
+	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraStandHeight));
 	K2_OnEndProne(HeightAdjust, ScaledHeightAdjust);
 }
 
@@ -181,6 +197,6 @@ void ATACCharacterBase::OnStartProne(float HeightAdjust, float ScaledHeightAdjus
 	{
 		BaseTranslationOffset.Z = DefaultChar->GetBaseTranslationOffset().Z + HeightAdjust;
 	}
-
+	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraProneHeight));
 	K2_OnStartProne(HeightAdjust, ScaledHeightAdjust);
 }

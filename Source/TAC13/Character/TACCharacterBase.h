@@ -34,6 +34,20 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	TObjectPtr<class UCameraComponent> Camera;
 
+	UPROPERTY(BlueprintReadOnly, Category = Camera)
+	float CameraStandHeight;
+
+	UPROPERTY(BlueprintReadOnly, Category = Camera)
+	float CameraCrouchedHeight;
+	
+	UPROPERTY(BlueprintReadOnly, Category = Camera)
+	float CameraProneHeight;
+
+// Crouch Section
+public:
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+
 // Fire Montage
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)

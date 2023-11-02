@@ -257,7 +257,7 @@ void UTACCharacterMovementComponent::UnProne(bool bClientSimulation)
 	{
 		return;
 	}
-
+	
 	if (IsProneLocked())
 	{
 		return;
