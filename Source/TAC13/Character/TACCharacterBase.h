@@ -55,7 +55,7 @@ protected:
 
 	friend class FSavedMove_Character_Prone;
 protected:
-	FORCEINLINE UTACCharacterMovementComponent* GetProneCharacterMovement() const { return TACCharacterMovement; }
+	FORCEINLINE UTACCharacterMovementComponent* GetTACCharacterMovement() const { return TACCharacterMovement; }
 
 public:
 	/** Default proned eye height */

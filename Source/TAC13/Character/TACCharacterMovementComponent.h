@@ -19,18 +19,15 @@ class TAC13_API UTACCharacterMovementComponent : public UCharacterMovementCompon
 public:
 	UTACCharacterMovementComponent(const FObjectInitializer& ObjectInitializer);
 
-	
-	
-protected:
-	/** Character movement component belongs to */
-	UPROPERTY(Transient, DuplicateTransient)
-	TObjectPtr<ATACCharacterBase> TACCharacter;
-
-
 protected:
 	virtual void UnCrouch(bool bClientSimulation) override;
 	
 #pragma region Prone
+	private:
+	/** Character movement component belongs to */
+	UPROPERTY(Transient, DuplicateTransient)
+	TObjectPtr<ATACCharacterBase> TACCharacterOwner;
+
 public:
 	/** Max Acceleration (rate of change of velocity) */
 	UPROPERTY(Category="Character Movement (General Settings)", EditAnywhere, BlueprintReadWrite, meta=(ClampMin="0", UIMin="0"))
@@ -99,7 +96,6 @@ protected:
 	float ProneLockTimestamp = -1.f;
 
 public:
-	
 	virtual bool HasValidData() const override;
 	virtual void PostLoad() override;
 	virtual void SetUpdatedComponent(USceneComponent* NewUpdatedComponent) override;
@@ -174,9 +170,6 @@ protected:
 public:
 	/** Get prediction data for a client game. Should not be used if not running as a client. Allocates the data on demand and can be overridden to allocate a custom override if desired. Result must be a FNetworkPredictionData_Client_Character. */
 	virtual class FNetworkPredictionData_Client* GetPredictionData_Client() const override;
-
-#pragma endregion
-	
 };
 
 class TAC13_API FSavedMove_Character_Prone : public FSavedMove_Character
@@ -212,10 +205,8 @@ class TAC13_API FNetworkPredictionData_Client_Character_Prone : public FNetworkP
 	using Super = FNetworkPredictionData_Client_Character;
 
 public:
-	FNetworkPredictionData_Client_Character_Prone(const UCharacterMovementComponent& ClientMovement)
-	: Super(ClientMovement)
-	{}
+	FNetworkPredictionData_Client_Character_Prone(const UCharacterMovementComponent& ClientMovement);
 
 	virtual FSavedMovePtr AllocateNewMove() override;
-	
+#pragma endregion 
 };

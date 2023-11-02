@@ -4,9 +4,10 @@
 #include "Character/TACCharacterMovementComponent.h"
 
 #include "TAC13.h"
-#include "TACCharacterPlayer.h"
 #include "Components/CapsuleComponent.h"
+#include "Character/TACCharacterBase.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/GameStateBase.h"
 
 UTACCharacterMovementComponent::UTACCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -16,9 +17,11 @@ UTACCharacterMovementComponent::UTACCharacterMovementComponent(const FObjectInit
 	BrakingDecelerationProned = 512.f;
 	GroundFrictionProned = 3.f;
 	BrakingFrictionProned = 1.f;
-	PronedRadius = 60.f;
+
+	PronedRadius = 40.f;
 	PronedHalfHeight = 40.f;
-	ProneLockDuration = 1.f;
+
+	ProneLockDuration = 0.5f;
 }
 
 void UTACCharacterMovementComponent::UnCrouch(bool bClientSimulation)
@@ -29,21 +32,21 @@ void UTACCharacterMovementComponent::UnCrouch(bool bClientSimulation)
 
 bool UTACCharacterMovementComponent::HasValidData() const
 {
-	return Super::HasValidData() && IsValid(TACCharacter);
+	return Super::HasValidData() && IsValid(TACCharacterOwner);
 }
 
 void UTACCharacterMovementComponent::PostLoad()
 {
 	Super::PostLoad();
 
-	TACCharacter = Cast<ATACCharacterBase>(PawnOwner);
+	TACCharacterOwner = Cast<ATACCharacterBase>(PawnOwner);
 }
 
 void UTACCharacterMovementComponent::SetUpdatedComponent(USceneComponent* NewUpdatedComponent)
 {
 	Super::SetUpdatedComponent(NewUpdatedComponent);
 
-	TACCharacter = Cast<ATACCharacterBase>(PawnOwner);
+	TACCharacterOwner = Cast<ATACCharacterBase>(PawnOwner);
 }
 
 float UTACCharacterMovementComponent::GetMaxAcceleration() const
@@ -97,6 +100,7 @@ bool UTACCharacterMovementComponent::CanWalkOffLedges() const
 	{
 		return false;
 	}
+	
 	return Super::CanWalkOffLedges();
 }
 
@@ -107,31 +111,26 @@ bool UTACCharacterMovementComponent::CanAttemptJump() const
 
 float UTACCharacterMovementComponent::GetTimestamp() const
 {
-	if (CharacterOwner->GetLocalRole() == ROLE_Authority)
+	if(CharacterOwner->GetLocalRole() == ROLE_Authority)
 	{
 		if (CharacterOwner->IsLocallyControlled())
 		{
-			// Server owned character
-			return GetWorld()->GetTimeSeconds();
+			// Server owned character (Server Local Play) (Local : ROLE_Authority / Remote : ROLE_AutonomousProxy) 
+			return GetWorld()->GetGameState()->GetServerWorldTimeSeconds();
 		}
-		else
-		{
-			// Server remote character
-			const FNetworkPredictionData_Server_Character* ServerData = GetPredictionData_Server_Character();
-			return ServerData->CurrentClientTimeStamp;
-		}
+		// Server remote character (Server Remote Play) (Local : ROLE_Authority / Remote : ROLE_AutonomousProxy)
+		const FNetworkPredictionData_Server_Character* ServerData = GetPredictionData_Server_Character();
+		return ServerData->CurrentClientTimeStamp;
 	}
-	else
-	{
-		// Client owned character
-		const FNetworkPredictionData_Client_Character* ClientData = GetPredictionData_Client_Character();
-		return ClientData->CurrentTimeStamp;
-	}
+
+	// Client owned character (Client Local Play) (Local : ROLE_AutonomousProxy / Remote : ROLE_Authority) (Client Remote Play) (Local : ROLE_SimulatedProxy / Remote : ROLE_Authority) 
+	// const FNetworkPredictionData_Client_Character* ClientData = GetPredictionData_Client_Character();
+	return GetWorld()->GetTimeSeconds(); //ClientData->CurrentTimeStamp;
 }
 
 bool UTACCharacterMovementComponent::IsProned() const
 {
-	return TACCharacter && TACCharacter->bIsProned;
+	return TACCharacterOwner && TACCharacterOwner->bIsProned;
 }
 
 void UTACCharacterMovementComponent::Prone(bool bClientSimulation)
@@ -150,12 +149,11 @@ void UTACCharacterMovementComponent::Prone(bool bClientSimulation)
 	if (CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == PronedHalfHeight &&
 		CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleRadius() == PronedRadius)
 	{
-		
 		if (!bClientSimulation)
 		{
-			TACCharacter->bIsProned = true;
+			TACCharacterOwner->bIsProned = true;
 		}
-		TACCharacter->OnStartProne( 0.f, 0.f );
+		TACCharacterOwner->OnStartProne( 0.f, 0.f );
 		SetProneLock(true);
 		return;
 	}
@@ -204,7 +202,7 @@ void UTACCharacterMovementComponent::Prone(bool bClientSimulation)
 			UpdatedComponent->MoveComponent(FVector(0.f, 0.f, -ScaledHalfHeightAdjust), UpdatedComponent->GetComponentQuat(), true, nullptr, EMoveComponentFlags::MOVECOMP_NoFlags, ETeleportType::TeleportPhysics);
 		}
 
-		TACCharacter->bIsProned = true;
+		TACCharacterOwner->bIsProned = true;
 	}
 
 	// Our capsule is growing during prone, test for encroaching from radius
@@ -239,7 +237,7 @@ void UTACCharacterMovementComponent::Prone(bool bClientSimulation)
 	ScaledHalfHeightAdjust = HalfHeightAdjust * ComponentScale;
 
 	AdjustProxyCapsuleSize();
-	TACCharacter->OnStartProne( HalfHeightAdjust, ScaledHalfHeightAdjust );
+	TACCharacterOwner->OnStartProne( HalfHeightAdjust, ScaledHalfHeightAdjust );
 
 	// Don't smooth this change in mesh position
 	if ((bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy) || (IsNetMode(NM_ListenServer) && CharacterOwner->GetRemoteRole() == ROLE_AutonomousProxy))
@@ -265,7 +263,7 @@ void UTACCharacterMovementComponent::UnProne(bool bClientSimulation)
 		return;
 	}
 
-	ATACCharacterBase* DefaultCharacter = CharacterOwner->GetClass()->GetDefaultObject<ATACCharacterBase>();
+	ATACCharacterBase* DefaultCharacter = TACCharacterOwner->GetClass()->GetDefaultObject<ATACCharacterBase>();
 
 	// See if collision is already at desired size.
 	if (CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() == DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() &&
@@ -273,9 +271,9 @@ void UTACCharacterMovementComponent::UnProne(bool bClientSimulation)
 	{
 		if (!bClientSimulation)
 		{
-			TACCharacter->bIsProned = false;
+			TACCharacterOwner->bIsProned = false;
 		}
-		TACCharacter->OnEndProne( 0.f, 0.f );
+		TACCharacterOwner->OnEndProne( 0.f, 0.f );
 		return;
 	}
 
@@ -377,7 +375,7 @@ void UTACCharacterMovementComponent::UnProne(bool bClientSimulation)
 			return;
 		}
 
-		TACCharacter->bIsProned = false;
+		TACCharacterOwner->bIsProned = false;
 	}	
 	else
 	{
@@ -389,7 +387,7 @@ void UTACCharacterMovementComponent::UnProne(bool bClientSimulation)
 
 	const float MeshAdjust = ScaledHalfHeightAdjust;
 	AdjustProxyCapsuleSize();
-	TACCharacter->OnEndProne( HalfHeightAdjust, ScaledHalfHeightAdjust );
+	TACCharacterOwner->OnEndProne( HalfHeightAdjust, ScaledHalfHeightAdjust );
 
 	// Don't smooth this change in mesh position
 	if ((bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy) || (IsNetMode(NM_ListenServer) && CharacterOwner->GetRemoteRole() == ROLE_AutonomousProxy))
@@ -437,12 +435,6 @@ void UTACCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float De
 	// Proxies get replicated Prone state.
 	if (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)
 	{
-		// Check if prone lock timer has expired
-		if (bProneLocked && !IsProneLockOnTimer())
-		{
-			SetProneLock(false);
-		}
-		
 		// Check for a change in Prone state. Players toggle Prone by changing bWantsToProne.
 		const bool bIsProned = IsProned();
 		if (bIsProned && (!bWantsToProne || !CanProneInCurrentState()))
@@ -458,6 +450,12 @@ void UTACCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float De
 			}
 			Prone(false);
 		}
+	}
+	
+	// Check if prone lock timer has expired
+	if (bProneLocked && !IsProneLockOnTimer())
+	{
+		SetProneLock(false);
 	}
 }
 
@@ -513,6 +511,7 @@ uint8 FSavedMove_Character_Prone::GetCompressedFlags() const
 {
 	uint8 Result = Super::GetCompressedFlags();
 
+	
 	if (bWantsToProne)
 	{
 		Result |= FLAG_Custom_1;
@@ -521,10 +520,16 @@ uint8 FSavedMove_Character_Prone::GetCompressedFlags() const
 	return Result;
 }
 
+FNetworkPredictionData_Client_Character_Prone::FNetworkPredictionData_Client_Character_Prone(const UCharacterMovementComponent& ClientMovement)
+	: Super(ClientMovement)
+{
+	
+}
+
 void UTACCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 {
 	Super::UpdateFromCompressedFlags(Flags);
-
+	
 	bWantsToProne = ((Flags & FSavedMove_Character::FLAG_Custom_1) != 0);
 }
 
