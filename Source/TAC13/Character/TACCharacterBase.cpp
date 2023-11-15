@@ -3,6 +3,7 @@
 
 #include "TACCharacterBase.h"
 
+#include "TAC13.h"
 #include "TACCharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -10,6 +11,7 @@
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+
 
 // Sets default values
 ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer)
@@ -53,7 +55,7 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	Camera->bUsePawnControlRotation = true;
 	
 	PronedEyeHeight = 30.f;
-}
+} 
 
 void ATACCharacterBase::PostInitializeComponents()
 {
@@ -74,8 +76,10 @@ void ATACCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME_CONDITION(ThisClass, bIsProned, COND_SimulatedOnly);
+	DOREPLIFETIME_CONDITION(ThisClass, bIsSprinting, COND_SimulatedOnly);
 }
 
+#pragma region 웅크리기
 void ATACCharacterBase::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
@@ -87,6 +91,7 @@ void ATACCharacterBase::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeig
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraStandHeight));
 }
+#pragma endregion
 
 void ATACCharacterBase::FireHitCheck()
 {
@@ -157,13 +162,12 @@ void ATACCharacterBase::UnProne(bool bClientSimulation)
 
 bool ATACCharacterBase::CanProne() const
 {
-	return !bIsProned && GetRootComponent() && !GetRootComponent()->IsSimulatingPhysics();
+	return !bIsProned && !bIsSprinting && GetRootComponent() && !GetRootComponent()->IsSimulatingPhysics();
 }
 
 void ATACCharacterBase::OnEndProne(float HeightAdjust, float ScaledHeightAdjust)
 {
 	RecalculateBaseEyeHeight();
-
 	if (!bIsCrouched)
 	{
 		const ACharacter* DefaultChar = GetDefault<ACharacter>(GetClass());
@@ -199,4 +203,58 @@ void ATACCharacterBase::OnStartProne(float HeightAdjust, float ScaledHeightAdjus
 	}
 	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraProneHeight));
 	K2_OnStartProne(HeightAdjust, ScaledHeightAdjust);
+}
+
+void ATACCharacterBase::OnRep_IsSprinting()
+{
+	if (TACCharacterMovement)
+	{
+		if (bIsSprinting)
+		{
+			TACCharacterMovement->bWantsToProne = false;
+			TACCharacterMovement->bWantsToCrouch = false;
+			TACCharacterMovement->bWantsToSprint = true;
+			TACCharacterMovement->Sprint(true);
+		}
+		else
+		{
+			TACCharacterMovement->bWantsToSprint = false;
+			TACCharacterMovement->UnSprint(true);
+		}
+		TACCharacterMovement->bNetworkUpdateReceived = true;
+	}
+}
+
+void ATACCharacterBase::Sprint(bool bClientSimulation)
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	if (TACCharacterMovement)
+	{
+		TACCharacterMovement->bWantsToProne = false;
+		TACCharacterMovement->bWantsToCrouch = false;
+		TACCharacterMovement->bWantsToSprint = true;
+	}
+}
+
+void ATACCharacterBase::UnSprint(bool bClientSimulation)
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	if (TACCharacterMovement)
+	{
+		TACCharacterMovement->bWantsToSprint = false;
+	}
+}
+
+void ATACCharacterBase::OnEndSprint()
+{
+	GetTACCharacterMovement()->MaxWalkSpeed = GetTACCharacterMovement()->MaxBaseSpeed;
+	
+	K2_OnEndSprint();
+}
+
+void ATACCharacterBase::OnStartSprint()
+{
+	GetTACCharacterMovement()->MaxWalkSpeed = GetTACCharacterMovement()->MaxWalkSpeedSprinting;
+	K2_OnStartSprint();
+	
 }

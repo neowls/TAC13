@@ -6,6 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "TAC13.h"
+#include "TACCharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/DamageEvents.h"
 #include "GameFramework/GameStateBase.h"
@@ -122,7 +123,7 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Move);
 	EnhancedInputComponent->BindAction(ProneAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::TryProne);
 	EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Sneak);
-	EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Sprint);
+	EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::TrySprint);
 	EnhancedInputComponent->BindAction(MeleeAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Melee);
 	EnhancedInputComponent->BindAction(LeaningAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Leaning);
 	EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::TryCrouch);
@@ -344,11 +345,6 @@ void ATACCharacterPlayer::Aim(const FInputActionValue& Value)
 	
 }
 
-void ATACCharacterPlayer::Sprint(const FInputActionValue& Value)
-{
-	
-}
-
 void ATACCharacterPlayer::Sneak(const FInputActionValue& Value)
 {
 	
@@ -356,15 +352,25 @@ void ATACCharacterPlayer::Sneak(const FInputActionValue& Value)
 
 void ATACCharacterPlayer::TryCrouch()
 {
+	if(bIsSprinting) return;
 	if(bIsCrouched) UnCrouch(false);
 	else Crouch();
 }
 
 void ATACCharacterPlayer::TryProne()
 {
+	if(bIsSprinting) return;
 	if(bIsProned) UnProne();
 	else Prone();
 }
+
+void ATACCharacterPlayer::TrySprint(const FInputActionValue& Value)
+{
+	const bool bSprintInput = Value.Get<bool>();
+	if(bSprintInput) Sprint();
+	else UnSprint();
+}
+
 
 void ATACCharacterPlayer::Leaning(const FInputActionValue& Value)
 {

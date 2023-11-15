@@ -12,16 +12,53 @@
 UTACCharacterMovementComponent::UTACCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	//	Prone Section	
 	MaxAccelerationProned = 256.f;
 	MaxWalkSpeedProned = 168.f;
 	BrakingDecelerationProned = 512.f;
 	GroundFrictionProned = 3.f;
 	BrakingFrictionProned = 1.f;
-
 	PronedRadius = 40.f;
 	PronedHalfHeight = 40.f;
-
 	ProneLockDuration = 0.5f;
+
+	//	Sprint Section
+	MaxAccelerationSprinting = 1024.f;
+	MaxWalkSpeedSprinting = 600.f;
+	BrakingDecelerationSprinting = 512.f;
+	GroundFrictionSprinting = 8.f;
+	BrakingFrictionSprinting = 4.f;
+	VelocityCheckMitigatorSprinting = 0.98f;
+	MaxBaseSpeed = MaxWalkSpeed;
+}
+
+const float UTACCharacterMovementComponent::GetGroundDistance()
+{
+	const float GroundTraceDistance = 100000.0f;
+	if (MovementMode == MOVE_Walking)
+	{
+		return 0.0f;
+	}
+	
+	const UCapsuleComponent* CapsuleComp = CharacterOwner->GetCapsuleComponent();
+	check(CapsuleComp);
+
+	const float CapsuleHalfHeight = CapsuleComp->GetUnscaledCapsuleHalfHeight();
+	const ECollisionChannel CollisionChannel = (UpdatedComponent ? UpdatedComponent->GetCollisionObjectType() : ECC_Pawn);
+	const FVector TraceStart(GetActorLocation());
+	const FVector TraceEnd(TraceStart.X, TraceStart.Y, (TraceStart.Z - GroundTraceDistance - CapsuleHalfHeight));
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(CharacterMovementComponent_GetGroundInfo), false, CharacterOwner);
+	FCollisionResponseParams ResponseParam;
+	InitCollisionParams(QueryParams, ResponseParam);
+
+	FHitResult HitResult;
+	GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, CollisionChannel, QueryParams, ResponseParam);
+
+	if(MovementMode == MOVE_Walking) return 0.0f;
+	if(HitResult.bBlockingHit) return FMath::Max((HitResult.Distance - CapsuleHalfHeight), 0.0f);
+	
+	return 0.0f;
 }
 
 void UTACCharacterMovementComponent::UnCrouch(bool bClientSimulation)
@@ -51,47 +88,150 @@ void UTACCharacterMovementComponent::SetUpdatedComponent(USceneComponent* NewUpd
 
 float UTACCharacterMovementComponent::GetMaxAcceleration() const
 {
-	if (IsProned() && IsMovingOnGround())
+	if (IsMovingOnGround())
 	{
-		return MaxAccelerationProned;
+		if(IsProned())	return MaxAccelerationProned;
+		if(IsSprinting()) return MaxAccelerationSprinting;
 	}
+	
 	return Super::GetMaxAcceleration();
 }
 
 float UTACCharacterMovementComponent::GetMaxSpeed() const
 {
-	if (IsProned() && IsMovingOnGround())
+	if (IsMovingOnGround())
 	{
-		return MaxWalkSpeedProned;
+		if(IsProned()) return MaxWalkSpeedProned;
+		if(IsSprinting()) return MaxWalkSpeedSprinting;
 	}
 	return Super::GetMaxSpeed();
 }
 
 float UTACCharacterMovementComponent::GetMaxBrakingDeceleration() const
 {
-	if (IsProned() && IsMovingOnGround())
+	if (IsMovingOnGround())
 	{
-		return BrakingDecelerationProned;
+		if(IsProned()) return BrakingDecelerationProned;
+		if(IsSprinting()) return BrakingDecelerationSprinting;
 	}
 	return Super::GetMaxBrakingDeceleration();
 }
 
 void UTACCharacterMovementComponent::CalcVelocity(float DeltaTime, float Friction, bool bFluid, float BrakingDeceleration)
 {
-	if (IsProned() && IsMovingOnGround())
+	if(IsMovingOnGround())
 	{
-		Friction = GroundFrictionProned;
+		if(IsProned())	Friction = GroundFrictionProned;
+		else if(IsSprinting()) Friction = GroundFrictionSprinting;
 	}
 	Super::CalcVelocity(DeltaTime, Friction, bFluid, BrakingDeceleration);
 }
 
 void UTACCharacterMovementComponent::ApplyVelocityBraking(float DeltaTime, float Friction, float BrakingDeceleration)
 {
-	if (IsProned() && IsMovingOnGround())
+	if (IsMovingOnGround())
 	{
-		Friction = (bUseSeparateBrakingFriction ? BrakingFrictionProned : GroundFrictionProned);
+		if(IsProned())	Friction = (bUseSeparateBrakingFriction ? BrakingFrictionProned : GroundFrictionProned);
+		else if(IsSprinting()) Friction = (bUseSeparateBrakingFriction ? BrakingFrictionSprinting : GroundFrictionSprinting); 
 	}
 	Super::ApplyVelocityBraking(DeltaTime, Friction, BrakingDeceleration);
+}
+
+
+bool UTACCharacterMovementComponent::IsSprintingAtSpeed() const
+{
+	if (!IsSprinting())
+	{
+		return false;
+	}
+
+	// When moving on ground we want to factor moving uphill or downhill so variations in terrain
+	// aren't culled from the check. When falling, we don't want to factor fall velocity, only lateral
+	const float Vel = IsMovingOnGround() ? Velocity.SizeSquared() : Velocity.SizeSquared2D();
+	const float WalkSpeed = IsCrouching() ? MaxWalkSpeedCrouched : MaxWalkSpeed;
+
+	// When struggling to surpass walk speed, which can occur with heavy rotation and low acceleration, we
+	// mitigate the check so there isn't a constant re-entry that can occur as an edge case
+	return Vel >= (WalkSpeed * WalkSpeed * VelocityCheckMitigatorSprinting);
+}
+
+bool UTACCharacterMovementComponent::IsSprinting() const
+{
+	return TACCharacterOwner && TACCharacterOwner->bIsSprinting;
+}
+
+void UTACCharacterMovementComponent::Sprint(bool bClientSimulation)
+{
+	if (!HasValidData())
+	{
+		return;
+	}
+
+	if (!bClientSimulation && !CanSprintInCurrentState())
+	{
+		return;
+	}
+
+	if (!bClientSimulation)
+	{
+		MaxWalkSpeed = MaxWalkSpeedSprinting;
+		TACCharacterOwner->bIsSprinting = true;
+	}
+	TACCharacterOwner->OnStartSprint();
+}
+
+void UTACCharacterMovementComponent::UnSprint(bool bClientSimulation)
+{
+	if (!HasValidData())
+	{
+		return;
+	}
+
+	if (!bClientSimulation)
+	{
+		MaxWalkSpeed = MaxBaseSpeed;
+		TACCharacterOwner->bIsSprinting = false;
+	}
+	TACCharacterOwner->OnEndSprint();
+}
+
+bool UTACCharacterMovementComponent::CanSprintInCurrentState() const
+{
+	if (!UpdatedComponent || UpdatedComponent->IsSimulatingPhysics())
+	{
+		return false;
+	}
+
+	if (!IsFalling() && !IsMovingOnGround())
+	{
+		return false;
+	}
+	
+	if (!IsSprintWithinAllowableInputAngle())
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool UTACCharacterMovementComponent::IsSprintWithinAllowableInputAngle() const
+{
+	// This check ensures that we are not sprinting backward or sideways, while allowing leeway 
+	// This angle allows sprinting when holding forward, forward left, forward right
+	// but not left or right or backward)
+	static constexpr float MaxSprintInputDegrees = 50.f;
+	static constexpr float MaxSprintInputNormal = 0.64278732;  // cos(rad(MaxSprintInputDegrees))
+
+	if constexpr (MaxSprintInputDegrees > 0.f)
+	{
+		const float Dot = (GetCurrentAcceleration().GetSafeNormal2D() | UpdatedComponent->GetForwardVector());
+		if (Dot < MaxSprintInputNormal)
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 bool UTACCharacterMovementComponent::CanWalkOffLedges() const
@@ -411,8 +551,20 @@ void UTACCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float De
 	// Proxies get replicated crouch state.
 	if (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)
 	{
+		// Check for a change in Sprint state. Players toggle Sprint by changing bWantsToSprint.
+		const bool bIsSprinting = IsSprinting();
+		if (bIsSprinting && (!bWantsToSprint || !CanSprintInCurrentState()))
+		{
+			UnSprint(false);
+		}
+		else if (!bIsSprinting && bWantsToSprint && CanSprintInCurrentState())
+		{
+			Sprint(false);
+		}
+		
 		// Check for a change in crouch state. Players toggle crouch by changing bWantsToCrouch.
 		const bool bIsCrouching = IsCrouching();
+
 		if (bIsCrouching && (!bWantsToCrouch || !CanCrouchInCurrentState()))
 		{
 			UnCrouch(false);
@@ -430,11 +582,7 @@ void UTACCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float De
 				Crouch(false);
 			}
 		}
-	}
 
-	// Proxies get replicated Prone state.
-	if (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)
-	{
 		// Check for a change in Prone state. Players toggle Prone by changing bWantsToProne.
 		const bool bIsProned = IsProned();
 		if (bIsProned && (!bWantsToProne || !CanProneInCurrentState()))
@@ -451,7 +599,7 @@ void UTACCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float De
 			Prone(false);
 		}
 	}
-	
+
 	// Check if prone lock timer has expired
 	if (bProneLocked && !IsProneLockOnTimer())
 	{
@@ -461,6 +609,15 @@ void UTACCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float De
 
 void UTACCharacterMovementComponent::UpdateCharacterStateAfterMovement(float DeltaSeconds)
 {
+	if (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)
+	{
+		// UnSprint if no longer allowed to be Sprinting
+		if (IsSprinting() && !CanSprintInCurrentState())
+		{
+			UnSprint(false);
+		}
+	}
+	
 	Super::UpdateCharacterStateAfterMovement(DeltaSeconds);
 
 	// Proxies get replicated Prone state.
@@ -477,50 +634,61 @@ void UTACCharacterMovementComponent::UpdateCharacterStateAfterMovement(float Del
 bool UTACCharacterMovementComponent::ClientUpdatePositionAfterServerUpdate()
 {
 	const bool bRealProne = bWantsToProne;
+	const bool bRealSprint = bWantsToSprint;
 	const bool bResult = Super::ClientUpdatePositionAfterServerUpdate();
 	bWantsToProne = bRealProne;
+	bWantsToSprint = bRealSprint;
 
 	return bResult;
 }
 
-void FSavedMove_Character_Prone::Clear()
+void FSavedMove_Character_TAC::Clear()
 {
 	Super::Clear();
 
+	bWantsToSprint = false;
 	bWantsToProne = false;
 	bProneLocked = false;
 }
 
-void FSavedMove_Character_Prone::SetMoveFor(ACharacter* C, float InDeltaTime, FVector const& NewAccel,
+void FSavedMove_Character_TAC::SetMoveFor(ACharacter* C, float InDeltaTime, FVector const& NewAccel,
 	FNetworkPredictionData_Client_Character& ClientData)
 {
 	Super::SetMoveFor(C, InDeltaTime, NewAccel, ClientData);
 
+	bWantsToSprint = Cast<ATACCharacterBase>(C)->GetTACCharacterMovement()->bWantsToSprint;
 	bWantsToProne = Cast<ATACCharacterBase>(C)->GetTACCharacterMovement()->bWantsToProne;
 	bProneLocked = Cast<ATACCharacterBase>(C)->GetTACCharacterMovement()->bProneLocked;
+	
 }
 
-void FSavedMove_Character_Prone::PrepMoveFor(ACharacter* C)
+void FSavedMove_Character_TAC::PrepMoveFor(ACharacter* C)
 {
 	Super::PrepMoveFor(C);
 
 	Cast<ATACCharacterBase>(C)->GetTACCharacterMovement()->bProneLocked = bProneLocked;
+	
 }
 
-uint8 FSavedMove_Character_Prone::GetCompressedFlags() const
+uint8 FSavedMove_Character_TAC::GetCompressedFlags() const
 {
 	uint8 Result = Super::GetCompressedFlags();
 
+	if(bWantsToSprint)
+	{
+		Result |= FLAG_Custom_0;
+	}
 	
 	if (bWantsToProne)
 	{
 		Result |= FLAG_Custom_1;
 	}
 
+
 	return Result;
 }
 
-FNetworkPredictionData_Client_Character_Prone::FNetworkPredictionData_Client_Character_Prone(const UCharacterMovementComponent& ClientMovement)
+FNetworkPredictionData_Client_Character_TAC::FNetworkPredictionData_Client_Character_TAC(const UCharacterMovementComponent& ClientMovement)
 	: Super(ClientMovement)
 {
 	
@@ -530,12 +698,13 @@ void UTACCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 {
 	Super::UpdateFromCompressedFlags(Flags);
 	
+	bWantsToSprint = ((Flags & FSavedMove_Character::FLAG_Custom_0) != 0);
 	bWantsToProne = ((Flags & FSavedMove_Character::FLAG_Custom_1) != 0);
 }
 
-FSavedMovePtr FNetworkPredictionData_Client_Character_Prone::AllocateNewMove()
+FSavedMovePtr FNetworkPredictionData_Client_Character_TAC::AllocateNewMove()
 {
-	return MakeShared<FSavedMove_Character_Prone>();
+	return MakeShared<FSavedMove_Character_TAC>();
 }
 
 FNetworkPredictionData_Client* UTACCharacterMovementComponent::GetPredictionData_Client() const
@@ -543,7 +712,7 @@ FNetworkPredictionData_Client* UTACCharacterMovementComponent::GetPredictionData
 	if (ClientPredictionData == nullptr)
 	{
 		UTACCharacterMovementComponent* MutableThis = const_cast<UTACCharacterMovementComponent*>(this);
-		MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_Character_Prone(*this);
+		MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_Character_TAC(*this);
 	}
 
 	return ClientPredictionData;

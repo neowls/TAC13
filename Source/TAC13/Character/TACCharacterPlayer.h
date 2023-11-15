@@ -103,10 +103,10 @@ protected:
 	void Look(const FInputActionValue& Value);
 	void Fire(const FInputActionValue& Value);
 	void Aim(const FInputActionValue& Value);
-	void Sprint(const FInputActionValue& Value);
 	void Sneak(const FInputActionValue& Value);
 	void TryCrouch();
 	void TryProne();
+	void TrySprint(const FInputActionValue& Value);
 	void Melee();
 	void ChangeFireMode();
 	void Leaning(const FInputActionValue& Value);
