@@ -3,6 +3,7 @@
 #include "TACAnimInstance.h"
 
 #include "KismetAnimationLibrary.h"
+#include "TAC13.h"
 #include "Character/TACCharacterMovementComponent.h"
 #include "Character/TACCharacterPlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -20,6 +21,7 @@ UTACAnimInstance::UTACAnimInstance()
 	bEnableRootYawOffset = true;
 	RootYawOffsetAngleClamp = {-120.0f, 100.0f};
 	RootYawOffsetAngleClampCrouched = {-90.0f, 80.0f};
+	
 }
 
 void UTACAnimInstance::NativeBeginPlay()
@@ -37,17 +39,15 @@ void UTACAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 	if(!Owner) return;
 	UpdateLocationData(DeltaSeconds);
-	UpdateRotationData();
+	UpdateRotationData(DeltaSeconds);
 	UpdateVelocityData();
 	UpdateAccelerationData();
-	UpdateWallDetectionHeuristic();
 	UpdateCharacterStateData();
-	UpdateBlendWeightData(DeltaSeconds);
 	UpdateRootYawOffset(DeltaSeconds);
 	UpdateAimingData();
 	UpdateJumpFallData(DeltaSeconds);
 	UpdateGroundData();
-	
+	UpdateDisplayLog();
 	bIsFirstUpdate = false;
 }
 
@@ -86,71 +86,31 @@ void UTACAnimInstance::ProcessTurnYawCurve()
 			SetRootYawOffset(InRootYawOffset);
 		}
 	}
-	
 }
 
-EAnim_CardinalDirection UTACAnimInstance::SelectCardinalDirectionFromAngle(float Angle, float DeadZone, EAnim_CardinalDirection CurrentDirection, bool UseCurrentDirection)
+void UTACAnimInstance::UpdateDisplayLog()
 {
-	const float ABSAngle = abs(Angle);
-	float BwdDeadZone = DeadZone;
-	float FwdDeadZone = DeadZone;
-	if(UseCurrentDirection)
-	{
-		switch (CurrentDirection)
-		{
-			case EAnim_CardinalDirection::Forward:
-				FwdDeadZone *= 2.0f;
-				break;
-			case EAnim_CardinalDirection::Backward:
-				BwdDeadZone *= 2.0f;
-				break;
-			case EAnim_CardinalDirection::Left:
-				break;
-			case EAnim_CardinalDirection::Right:
-				break;
-			default: ;
-		}
-	}
-	if(ABSAngle <= 45.0f + FwdDeadZone)	return EAnim_CardinalDirection::Forward;
-	if(ABSAngle <= 135.0f - BwdDeadZone) return EAnim_CardinalDirection::Backward;
-	if(Angle > 0.0f) return EAnim_CardinalDirection::Right;
-	return EAnim_CardinalDirection::Left;
+	int LogKey = 0;
+	LOG_SCREEN(LogKey++, TEXT("World Rotation: %s"), *WorldRotation.ToString());
+	LOG_SCREEN(LogKey++, TEXT("World Location: %s"), *WorldLocation.ToString());
+	LOG_SCREEN(LogKey++, TEXT("World Velocity : %s"), *WorldVelocity.ToString());
+	LOG_SCREEN(LogKey++, TEXT("Local Velocity2D : %s"), *LocalVelocity2D.ToString());
+	LOG_SCREEN(LogKey++, TEXT("LocalVelocity Direction Angle : %f"), LocalVelocityDirectionAngle);
+	LOG_SCREEN(LogKey++, TEXT("LocalVelocity Direction Angle With Offset : %f"), LocalVelocityDirectionAngleWithOffset);
+	LOG_SCREEN(LogKey++, TEXT("Pivot Direction2D : %s"), *PivotDirection2D.ToString());
+	LOG_SCREEN(LogKey++, TEXT("Local Acceleration2D : %s"), *LocalAcceleration2D.ToString());
+	LOG_SCREEN(LogKey++, TEXT("Yaw Delta SinceLast Update : %f"), YawDeltaSinceLastUpdate);
+	LOG_SCREEN(LogKey++, TEXT("Yaw Delta Speed : %f"), YawDeltaSpeed);
+	LOG_SCREEN(LogKey++, TEXT("GroundSpeed : %f"), GroundSpeed);
+	LOG_SCREEN(LogKey++, TEXT("Displacement Since Last Update: %f"), DisplacementSinceLastUpdate);
+	LOG_SCREEN(LogKey++, TEXT("Displacement Speed : %f"), DisplacementSpeed);
+	LOG_SCREEN(LogKey++, TEXT("Has Velocity : %s"), bHasVelocity ? TEXT("True") : TEXT("False"));
+	LOG_SCREEN(LogKey++, TEXT("Has Acceleration : %s"), bHasAcceleration ? TEXT("True") : TEXT("False"));
+	LOG_SCREEN(LogKey++, TEXT("Is Jumping : %s"), bIsJumping ? TEXT("True") : TEXT("False"));
+	LOG_SCREEN(LogKey++, TEXT("Is Crouching : %s"), bIsCrouching ? TEXT("True") : TEXT("False"));
+	LOG_SCREEN(LogKey++, TEXT("Is Sprint : %s"), bIsSprint ? TEXT("True") : TEXT("False"));
+	LOG_SCREEN(LogKey++, TEXT("Is ADS : %s"), bIsADS ? TEXT("True") : TEXT("False"));
 }
-
-EAnim_CardinalDirection UTACAnimInstance::GetOppositeCardinalDirection(EAnim_CardinalDirection CurrentDirection)
-{
-	switch (CurrentDirection)
-	{
-		case EAnim_CardinalDirection::Forward:
-			return EAnim_CardinalDirection::Backward;
-		case EAnim_CardinalDirection::Backward:
-			return EAnim_CardinalDirection::Forward;
-		case EAnim_CardinalDirection::Left:
-			return EAnim_CardinalDirection::Right;
-		case EAnim_CardinalDirection::Right:
-			return EAnim_CardinalDirection::Left;
-		default: return CurrentDirection;
-	}
-}
-
-bool UTACAnimInstance::IsMovingPerpendicularToInitialPivot()
-{
-	const bool XDirection = (PivotInitialDirection == EAnim_CardinalDirection::Forward || PivotInitialDirection == EAnim_CardinalDirection::Backward) && (LocalVelocityDirection == EAnim_CardinalDirection::Forward || LocalVelocityDirection == EAnim_CardinalDirection::Backward);
-	const bool YDirection = (PivotInitialDirection == EAnim_CardinalDirection::Left || PivotInitialDirection == EAnim_CardinalDirection::Right) && (LocalVelocityDirection == EAnim_CardinalDirection::Left || LocalVelocityDirection == EAnim_CardinalDirection::Right);
-
-	return XDirection || YDirection;
-}
-
-bool UTACAnimInstance::ShouldEnableControlRig()
-{
-	return (GetCurveValue(TEXT("DisableLegIK")) <= 0.0f) && !bUseFootPlacement;
-}
-
-UCharacterMovementComponent* UTACAnimInstance::GetCharacterMovementComponent()
-{
-	return Owner->GetTACCharacterMovement();
-}
-
 
 void UTACAnimInstance::UpdateLocationData(float DeltaTime)
 {
@@ -164,29 +124,29 @@ void UTACAnimInstance::UpdateLocationData(float DeltaTime)
 	}
 }
 
-void UTACAnimInstance::UpdateRotationData()
+void UTACAnimInstance::UpdateRotationData(float DeltaTime)
 {
 	YawDeltaSinceLastUpdate = Owner->GetActorRotation().Yaw - WorldRotation.Yaw;
-	YawDeltaSpeed = UKismetMathLibrary::SafeDivide(YawDeltaSinceLastUpdate, GetDeltaSeconds());
+	YawDeltaSpeed = UKismetMathLibrary::SafeDivide(YawDeltaSinceLastUpdate, DeltaTime);
 	WorldRotation = Owner->GetActorRotation();
 	if(bIsFirstUpdate)
 	{
 		YawDeltaSinceLastUpdate = 0.0f;
 	}
+	
 }
 
 void UTACAnimInstance::UpdateVelocityData()
 {
-	const bool WasMovingLastUpdate = !UKismetMathLibrary::Vector_IsZero(LocalVelocity2D);
 	WorldVelocity = Owner->GetVelocity();
 	const FVector WorldVelocity2D = WorldVelocity * FVector(1.0f, 1.0f, 0.f);
 	LocalVelocity2D = WorldRotation.UnrotateVector(WorldVelocity2D);
 	LocalVelocityDirectionAngle = UKismetAnimationLibrary::CalculateDirection(WorldVelocity2D, WorldRotation);
 	LocalVelocityDirectionAngleWithOffset = LocalVelocityDirectionAngle - RootYawOffset;
-	LocalVelocityDirection = SelectCardinalDirectionFromAngle(LocalVelocityDirectionAngleWithOffset, CardinalDirectionDeadZone, LocalVelocityDirection, WasMovingLastUpdate);
-	LocalVelocityDirectionNoOffset = SelectCardinalDirectionFromAngle(LocalVelocityDirectionAngle, CardinalDirectionDeadZone, LocalVelocityDirectionNoOffset, WasMovingLastUpdate);
 	bHasVelocity = !UKismetMathLibrary::NearlyEqual_FloatFloat(UKismetMathLibrary::VSizeXYSquared(LocalVelocity2D), 0.0f);
 	GroundSpeed = WorldVelocity2D.Length();
+
+	
 }
 
 void UTACAnimInstance::UpdateAccelerationData()
@@ -195,7 +155,6 @@ void UTACAnimInstance::UpdateAccelerationData()
 	LocalAcceleration2D = WorldRotation.UnrotateVector(WorldAcceleration2D);
 	bHasAcceleration = !UKismetMathLibrary::NearlyEqual_FloatFloat(LocalAcceleration2D.SizeSquared2D(), 0.0);
 	PivotDirection2D = UKismetMathLibrary::VLerp(PivotDirection2D, WorldAcceleration2D.GetSafeNormal(0.0001), 0.5f).GetSafeNormal(0.0001);
-	CardinalDirectionFromAcceleration = GetOppositeCardinalDirection(SelectCardinalDirectionFromAngle(UKismetAnimationLibrary::CalculateDirection(PivotDirection2D, WorldRotation), CardinalDirectionDeadZone, EAnim_CardinalDirection::Forward, false));
 }
 
 void UTACAnimInstance::UpdateCharacterStateData()
@@ -214,7 +173,6 @@ void UTACAnimInstance::UpdateCharacterStateData()
 		if(WorldVelocity.Z > 0.f) bIsJumping = true;
 		else bIsFalling = true;
 	}
-	
 }
 
 void UTACAnimInstance::UpdateRootYawOffset(float DeltaTime)
@@ -249,16 +207,6 @@ void UTACAnimInstance::UpdateJumpFallData(float DeltaTime)
 	else if(bIsJumping) TimeFalling = 0.0f;
 }
 
-void UTACAnimInstance::UpdateWallDetectionHeuristic()
-{
-	bIsRunningIntoWall = (LocalAcceleration2D.Size2D() > 0.1f && LocalVelocity2D.Size2D() < 200.0f &&
-		(UKismetMathLibrary::InRange_FloatFloat(UKismetMathLibrary::Dot_VectorVector(LocalAcceleration2D.GetSafeNormal(), LocalVelocity2D.GetSafeNormal()), -0.6f, 0.6f)));
-}
-
-void UTACAnimInstance::UpdateBlendWeightData(float DeltaTime)
-{
-	UpperbodyDynamicAdditiveWeight = (IsAnyMontagePlaying() && bIsOnGround) ? 1.0f : UKismetMathLibrary::FInterpTo(UpperbodyDynamicAdditiveWeight, 0.0f, DeltaTime, 6.0f);
-}
 
 void UTACAnimInstance::UpdateGroundData()
 {

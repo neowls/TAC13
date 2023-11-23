@@ -4,17 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "Character/TACCharacterBase.h"
 #include "TACAnimInstance.generated.h"
 
-
-UENUM(BlueprintType)
-enum class EAnim_CardinalDirection : uint8
-{
-	Forward,
-	Backward,
-	Left,
-	Right
-};
 
 UENUM(BlueprintType)
 enum class EAnim_RootYawOffsetMode : uint8
@@ -46,27 +38,16 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = TurnInPlace)
 	void UpdateRootYawOffset(float DeltaTime);
+
+	void UpdateDisplayLog();
 	
-
-	UFUNCTION(BlueprintPure, Category = Helper)
-	EAnim_CardinalDirection SelectCardinalDirectionFromAngle(float Angle, float DeadZone, EAnim_CardinalDirection CurrentDirection, bool UseCurrentDirection);
-
-	UFUNCTION(BlueprintPure, Category = Helper)
-	EAnim_CardinalDirection GetOppositeCardinalDirection(EAnim_CardinalDirection CurrentDirection);
- 
-	UFUNCTION(BlueprintPure, Category = Helper, meta = (BlueprintThreadSafe))
-	bool IsMovingPerpendicularToInitialPivot();
-
 	UFUNCTION(BlueprintPure)
-	bool ShouldEnableControlRig();
-
-	UFUNCTION(BlueprintPure)
-	class UCharacterMovementComponent* GetCharacterMovementComponent();
+	UCharacterMovementComponent* GetCharacterMovementComponent() const { return Owner->GetCharacterMovement(); }
 	
-	UFUNCTION(BlueprintCallable, Category = Update)
+	UFUNCTION(BlueprintCallable, Category = Update, meta = (BlueprintThreadSafe))
 	void UpdateVelocityData();
 
-	UFUNCTION(BlueprintCallable, Category = Update)
+	UFUNCTION(BlueprintCallable, Category = Update, meta = (BlueprintThreadSafe))
 	void UpdateAccelerationData();
 	
 	UFUNCTION(BlueprintCallable, Category = Update)
@@ -79,20 +60,14 @@ protected:
 	void UpdateLocationData(float DeltaTime);
 
 	UFUNCTION(BlueprintCallable, Category = Update)
-	void UpdateRotationData();
+	void UpdateRotationData(float DeltaTime);
 
 	UFUNCTION(BlueprintCallable, Category = Update)
 	void UpdateJumpFallData(float DeltaTime);
-
-	UFUNCTION(BlueprintCallable, Category = Update)
-	void UpdateWallDetectionHeuristic();
-
-	UFUNCTION(BlueprintCallable, Category = Update)
-	void UpdateBlendWeightData(float DeltaTime);
-
+	
 	UFUNCTION(BlueprintCallable, Category = Update)
 	void UpdateGroundData();
-	
+
 // Value Section
 public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
@@ -141,11 +116,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = Velocity)
 	float LocalVelocityDirectionAngleWithOffset;
 
-	UPROPERTY(BlueprintReadOnly, Category = Velocity)
-	EAnim_CardinalDirection LocalVelocityDirection;
-
-	UPROPERTY(BlueprintReadWrite, Category = Velocity)
-	EAnim_CardinalDirection LocalVelocityDirectionNoOffset;
 	
 	UPROPERTY(BlueprintReadOnly, Category = Velocity)
 	float GroundSpeed;
@@ -225,23 +195,14 @@ public:
 
 //	Locomotion SM Data
 	UPROPERTY(BlueprintReadWrite, Category = Locomotion)
-	EAnim_CardinalDirection StartDirection;
-
-	UPROPERTY(BlueprintReadWrite, Category = Locomotion)
-	EAnim_CardinalDirection PivotInitialDirection;
-
-	UPROPERTY(BlueprintReadWrite, Category = Locomotion)
-	EAnim_CardinalDirection CardinalDirectionFromAcceleration;
-	
-	UPROPERTY(BlueprintReadWrite, Category = Locomotion)
 	float LastPivotTime;
 	
 
 //	Linked Layer Data
-	UPROPERTY(BlueprintReadOnly, Category = LinkedLayerData)
+	UPROPERTY(BlueprintReadWrite, Category = LinkedLayerData)
 	uint8 bLinkedLayerChanged : 1;
 	
-	UPROPERTY(BlueprintReadOnly, Category = LinkedLayerData)
+	UPROPERTY(BlueprintReadWrite, Category = LinkedLayerData)
 	TObjectPtr<UAnimInstance> LastLinkedLayer;
 	
 	

@@ -105,7 +105,6 @@ protected:
 	void Aim(const FInputActionValue& Value);
 	void Sneak(const FInputActionValue& Value);
 	void TryCrouch();
-	void TryProne();
 	void TrySprint(const FInputActionValue& Value);
 	void Melee();
 	void ChangeFireMode();

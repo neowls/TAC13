@@ -121,7 +121,6 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Aim);
 	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Look);
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Move);
-	EnhancedInputComponent->BindAction(ProneAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::TryProne);
 	EnhancedInputComponent->BindAction(SneakAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Sneak);
 	EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::TrySprint);
 	EnhancedInputComponent->BindAction(MeleeAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Melee);
@@ -342,7 +341,12 @@ void ATACCharacterPlayer::Fire(const FInputActionValue& Value)
 
 void ATACCharacterPlayer::Aim(const FInputActionValue& Value)
 {
-	
+	bIsADS = Value.Get<bool>();
+	if (TACCharacterMovement)
+	{
+		if(bIsADS) TACCharacterMovement->bWantsToADS = true;
+		else TACCharacterMovement->bWantsToADS = false;
+	}
 }
 
 void ATACCharacterPlayer::Sneak(const FInputActionValue& Value)
@@ -355,13 +359,6 @@ void ATACCharacterPlayer::TryCrouch()
 	if(bIsSprinting) return;
 	if(bIsCrouched) UnCrouch(false);
 	else Crouch();
-}
-
-void ATACCharacterPlayer::TryProne()
-{
-	if(bIsSprinting) return;
-	if(bIsProned) UnProne();
-	else Prone();
 }
 
 void ATACCharacterPlayer::TrySprint(const FInputActionValue& Value)

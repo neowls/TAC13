@@ -53,8 +53,6 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	CameraProneHeight = 34.f;
 	Camera->SetRelativeLocation(FVector(0.f,0.f,CameraStandHeight));
 	Camera->bUsePawnControlRotation = true;
-	
-	PronedEyeHeight = 30.f;
 } 
 
 void ATACCharacterBase::PostInitializeComponents()
@@ -75,23 +73,37 @@ void ATACCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	DOREPLIFETIME_CONDITION(ThisClass, bIsProned, COND_SimulatedOnly);
 	DOREPLIFETIME_CONDITION(ThisClass, bIsSprinting, COND_SimulatedOnly);
+	DOREPLIFETIME_CONDITION(ThisClass, bIsADS, COND_SimulatedOnly);
 }
 
-#pragma region 웅크리기
-void ATACCharacterBase::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+void ATACCharacterBase::OnRep_IsADS()
 {
-	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
-	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraCrouchedHeight));
+	if(TACCharacterMovement)
+	{
+		if(bIsADS)
+		{
+			TACCharacterMovement->bWantsToADS = true;
+			TACCharacterMovement->ADS(true);
+		}
+		else
+		{
+			TACCharacterMovement->bWantsToADS = false;
+			TACCharacterMovement->UnADS(true);
+		}
+		
+	}
 }
 
-void ATACCharacterBase::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+void ATACCharacterBase::OnStartADS()
 {
-	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
-	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraStandHeight));
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("begin"));
 }
-#pragma endregion
+
+void ATACCharacterBase::OnEndADS()
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("begin"));
+}
 
 void ATACCharacterBase::FireHitCheck()
 {
@@ -111,109 +123,34 @@ void ATACCharacterBase::FireHitCheck()
 	}
 }
 
-void ATACCharacterBase::RecalculateBaseEyeHeight()
+
+#pragma region 웅크리기
+void ATACCharacterBase::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	if (bIsProned)
-	{
-		BaseEyeHeight = PronedEyeHeight;
-	}
-	else
-	{
-		Super::RecalculateBaseEyeHeight();
-	}
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraCrouchedHeight));
 }
 
-void ATACCharacterBase::OnRep_IsProned()
+void ATACCharacterBase::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	if (TACCharacterMovement)
-	{
-		if (bIsProned)
-		{
-			TACCharacterMovement->bWantsToProne = true;
-			TACCharacterMovement->Prone(true);
-		}
-		else
-		{
-			TACCharacterMovement->bWantsToProne = false;
-			TACCharacterMovement->UnProne(true);
-		}
-		TACCharacterMovement->bNetworkUpdateReceived = true;
-	}
-}
-
-void ATACCharacterBase::Prone(bool bClientSimulation)
-{
-	if (TACCharacterMovement)
-	{
-		if (CanProne())
-		{
-			TACCharacterMovement->bWantsToProne = true;
-		}
-	}
-}
-
-void ATACCharacterBase::UnProne(bool bClientSimulation)
-{
-	if (TACCharacterMovement)
-	{
-		TACCharacterMovement->bWantsToProne = false;
-	}
-}
-
-bool ATACCharacterBase::CanProne() const
-{
-	return !bIsProned && !bIsSprinting && GetRootComponent() && !GetRootComponent()->IsSimulatingPhysics();
-}
-
-void ATACCharacterBase::OnEndProne(float HeightAdjust, float ScaledHeightAdjust)
-{
-	RecalculateBaseEyeHeight();
-	if (!bIsCrouched)
-	{
-		const ACharacter* DefaultChar = GetDefault<ACharacter>(GetClass());
-		if (GetMesh() && DefaultChar->GetMesh())
-		{
-			FVector& MeshRelativeLocation = GetMesh()->GetRelativeLocation_DirectMutable();
-			MeshRelativeLocation.Z = DefaultChar->GetMesh()->GetRelativeLocation().Z;
-			BaseTranslationOffset.Z = MeshRelativeLocation.Z;
-		}
-		else
-		{
-			BaseTranslationOffset.Z = DefaultChar->GetBaseTranslationOffset().Z;
-		}
-	}
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraStandHeight));
-	K2_OnEndProne(HeightAdjust, ScaledHeightAdjust);
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 }
+#pragma endregion
 
-void ATACCharacterBase::OnStartProne(float HeightAdjust, float ScaledHeightAdjust)
-{
-	RecalculateBaseEyeHeight();
-
-	const ACharacter* DefaultChar = GetDefault<ACharacter>(GetClass());
-	if (GetMesh() && DefaultChar->GetMesh())
-	{
-		FVector& MeshRelativeLocation = GetMesh()->GetRelativeLocation_DirectMutable();
-		MeshRelativeLocation.Z = DefaultChar->GetMesh()->GetRelativeLocation().Z + HeightAdjust;
-		BaseTranslationOffset.Z = MeshRelativeLocation.Z;
-	}
-	else
-	{
-		BaseTranslationOffset.Z = DefaultChar->GetBaseTranslationOffset().Z + HeightAdjust;
-	}
-	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraProneHeight));
-	K2_OnStartProne(HeightAdjust, ScaledHeightAdjust);
-}
+#pragma region 달리기
 
 void ATACCharacterBase::OnRep_IsSprinting()
 {
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("begin"));
 	if (TACCharacterMovement)
 	{
 		if (bIsSprinting)
 		{
-			TACCharacterMovement->bWantsToProne = false;
 			TACCharacterMovement->bWantsToCrouch = false;
 			TACCharacterMovement->bWantsToSprint = true;
+			TACCharacterMovement->bWantsToADS = false;
 			TACCharacterMovement->Sprint(true);
 		}
 		else
@@ -223,6 +160,7 @@ void ATACCharacterBase::OnRep_IsSprinting()
 		}
 		TACCharacterMovement->bNetworkUpdateReceived = true;
 	}
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("end"));
 }
 
 void ATACCharacterBase::Sprint(bool bClientSimulation)
@@ -230,10 +168,10 @@ void ATACCharacterBase::Sprint(bool bClientSimulation)
 	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	if (TACCharacterMovement)
 	{
-		TACCharacterMovement->bWantsToProne = false;
 		TACCharacterMovement->bWantsToCrouch = false;
 		TACCharacterMovement->bWantsToSprint = true;
 	}
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
 void ATACCharacterBase::UnSprint(bool bClientSimulation)
@@ -243,6 +181,7 @@ void ATACCharacterBase::UnSprint(bool bClientSimulation)
 	{
 		TACCharacterMovement->bWantsToSprint = false;
 	}
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
 void ATACCharacterBase::OnEndSprint()
