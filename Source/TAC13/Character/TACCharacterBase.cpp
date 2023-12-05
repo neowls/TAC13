@@ -34,6 +34,12 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	{
 		FireCosmeticMontage = FireCosmeticMontageRef.Object;
 	}
+
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> ChangeWeaponMontageRef(TEXT("/Script/Engine.AnimMontage'/Game/_Asset/Characters/Mannequin/Animations/Actions/AM_Rifle_Equip_Montage.AM_Rifle_Equip_Montage'"));
+	if (ChangeWeaponMontageRef.Object)
+	{
+		ChangeWeaponMontage = ChangeWeaponMontageRef.Object;
+	}
 	
 	//	Movement Section
 	TACCharacterMovement = Cast<UTACCharacterMovementComponent>(GetCharacterMovement());
@@ -103,6 +109,11 @@ void ATACCharacterBase::OnStartADS()
 void ATACCharacterBase::OnEndADS()
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("begin"));
+}
+
+void ATACCharacterBase::ChangeWeaponCheck()
+{
+	
 }
 
 void ATACCharacterBase::FireHitCheck()
@@ -197,3 +208,4 @@ void ATACCharacterBase::OnStartSprint()
 	K2_OnStartSprint();
 	
 }
+#pragma endregion 

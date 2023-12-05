@@ -4,7 +4,49 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Engine/DataTable.h"
 #include "TACWeapon.generated.h"
+
+class ATACCharacterPlayer;
+
+UENUM(BlueprintType)
+enum class EFireMode:uint8
+{
+	SINGLE,
+	BURST,
+	FULL
+};
+
+USTRUCT()
+struct FTACWeaponStat : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	FTACWeaponStat() : Damage(0.0f), FireRate(0.0f), Recoil(0.0f), Ergonomics(0.0f), MaxAmmo(0) {};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class USkeletalMesh> OwnMesh;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
+	TArray<EFireMode> OwnFireMode;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
+	float Damage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
+	float FireRate;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
+	float Recoil;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
+	float Ergonomics;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
+	uint8 MaxAmmo;
+};
+
 
 UCLASS()
 class TAC13_API ATACWeapon : public AActor
@@ -12,15 +54,58 @@ class TAC13_API ATACWeapon : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	ATACWeapon();
 
+	FORCEINLINE FTACWeaponStat GetWeaponStat() const { return WeaponStat; }
+	void SetWeaponStat(const FTACWeaponStat& InWeaponStat) { WeaponStat = InWeaponStat; WeaponStat.FireRate = 60 / WeaponStat.FireRate; }
+
+	virtual void SetOwner(AActor* NewOwner) override;
+
+	void ChangeFireMode();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	TObjectPtr<USceneComponent> Root;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Weapon)
+	TObjectPtr<USkeletalMeshComponent> Mesh;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	TObjectPtr<UStaticMeshComponent> Sight;
 
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = Weapon)
+	TObjectPtr<class ATACCharacterPlayer> CurrentOwner;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_SetWeaponStatData , Category = Stat)
+	FTACWeaponStat WeaponStat;
+
+	UPROPERTY()
+	EFireMode CurrentFireMode;
+
+	UPROPERTY()
+	uint8 CurrentFireModeIdx;
+
+	UPROPERTY()
+	uint8 CurrentAmmo;
+	
+	UPROPERTY()
+	uint8 OwnAmmo;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	void LoadWeaponStatData(FName InName);
+
+	UFUNCTION()
+	void OnRep_SetWeaponStatData();
+	
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE USkeletalMeshComponent* GetMesh() const { return Mesh; }
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE UStaticMeshComponent* GetSightMesh() const { return Sight; }
+	
 };

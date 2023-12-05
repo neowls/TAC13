@@ -21,6 +21,8 @@ UTACAnimInstance::UTACAnimInstance()
 	bEnableRootYawOffset = true;
 	RootYawOffsetAngleClamp = {-120.0f, 100.0f};
 	RootYawOffsetAngleClampCrouched = {-90.0f, 80.0f};
+	AimYaw = 0.f;
+	AimPitch = 0.f;
 	
 }
 
@@ -47,7 +49,7 @@ void UTACAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 	UpdateAimingData();
 	UpdateJumpFallData(DeltaSeconds);
 	UpdateGroundData();
-	UpdateDisplayLog();
+	//if(Owner->IsLocallyControlled())UpdateDisplayLog();
 	bIsFirstUpdate = false;
 }
 
@@ -93,8 +95,7 @@ void UTACAnimInstance::UpdateDisplayLog()
 	int LogKey = 0;
 	LOG_SCREEN(LogKey++, TEXT("World Rotation: %s"), *WorldRotation.ToString());
 	LOG_SCREEN(LogKey++, TEXT("World Location: %s"), *WorldLocation.ToString());
-	LOG_SCREEN(LogKey++, TEXT("World Velocity : %s"), *WorldVelocity.ToString());
-	LOG_SCREEN(LogKey++, TEXT("Local Velocity2D : %s"), *LocalVelocity2D.ToString());
+	LOG_SCREEN(LogKey++, TEXT("World Velocity : %s"), *WorldVelocity.ToString());	LOG_SCREEN(LogKey++, TEXT("Local Velocity2D : %s"), *LocalVelocity2D.ToString());
 	LOG_SCREEN(LogKey++, TEXT("LocalVelocity Direction Angle : %f"), LocalVelocityDirectionAngle);
 	LOG_SCREEN(LogKey++, TEXT("LocalVelocity Direction Angle With Offset : %f"), LocalVelocityDirectionAngleWithOffset);
 	LOG_SCREEN(LogKey++, TEXT("Pivot Direction2D : %s"), *PivotDirection2D.ToString());
@@ -123,7 +124,7 @@ void UTACAnimInstance::UpdateLocationData(float DeltaTime)
 		DisplacementSpeed = 0.0f;
 	}
 }
-
+	
 void UTACAnimInstance::UpdateRotationData(float DeltaTime)
 {
 	YawDeltaSinceLastUpdate = Owner->GetActorRotation().Yaw - WorldRotation.Yaw;

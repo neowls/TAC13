@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "Character/TACCharacterBase.h"
 #include "InputActionValue.h"
+#include "Weapon/TACWeapon.h"
 #include "TACCharacterPlayer.generated.h"
 
+class UTACAnimInstance;
 /**
  * 
  */
@@ -18,49 +20,107 @@ class TAC13_API ATACCharacterPlayer : public ATACCharacterBase
 public:
 	ATACCharacterPlayer(const FObjectInitializer& ObjectInitializer);
 
-protected:
-	virtual void BeginPlay() override;
-	virtual void PossessedBy(AController* NewController) override;
-	
-public:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 protected:
+	virtual void BeginPlay() override;
+	
+	virtual void PossessedBy(AController* NewController) override;
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void FireHitCheck() override;
-	void FireHitConfirm(AActor* HitActor);
-	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-	void PlayFireAnimation();
 
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+#pragma region FIRE
+
+public:
+	UFUNCTION()
+	void ResetFire();
+
+protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCFire(float FireStartTime);
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastRPCFire();
-
-	UFUNCTION(Client, Unreliable)
-	void ClientRPCPlayerAnimation(ATACCharacterPlayer* CharacterToPlay);
-
+	
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCNotifyHit(const FHitResult& HitResult, float HitCheckTime);
-
-	UPROPERTY(ReplicatedUsing = OnRep_CanFire)
-	uint8 bCanFire : 1;
 
 	UFUNCTION()
 	void OnRep_CanFire();
 
-	float FireTime = 0.1f;
-	float LastFireStartTime = 0.0f;
-	float FireTimeDifference = 0.0f;
-	float AcceptMinCheckTime = 0.1f;
+	void PlayFireAnimation();
+	
+	void FireHitConfirm(const FHitResult& HitResult);
+	
+	virtual void FireHitCheck() override;
 
-public:
-	void ResetFire();
+	UPROPERTY(ReplicatedUsing = OnRep_CanFire)
+	uint8 bCanFire : 1;
 	
 	FTimerHandle FireTimerHandle;
 	
-#pragma region Input
+	float FireTime = 0.1f;
+	
+	float LastFireStartTime = 0.0f;
+	
+	float FireTimeDifference = 0.0f;
+	
+	float AcceptMinCheckTime = 0.1f;
+
+#pragma endregion 
+
+#pragma region WEAPON
+
+public:
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, ReplicatedUsing = OnRep_OwnWeapons, Category = Weapon)
+	TArray<TObjectPtr<ATACWeapon>> OwnWeapons;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, ReplicatedUsing = OnRep_CurrentWeapon, Category = Weapon)
+	TObjectPtr<ATACWeapon> CurrentWeapon;
+
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	TSubclassOf<ATACWeapon> WeaponToSpawn;
+	
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE FTransform GetLeftHandTransform() const { return CurrentWeapon->GetMesh()->GetSocketTransform(FName("S_Left_Hand")); }
+	
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	void SpawnWeapon(FName WeaponName);
+
+protected:
+	
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite , Category = Weapon)
+	uint8 CurrentWeaponIndex;
+
+	uint8 LocalWeaponIndex;
+
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	void EquipWeapon(const uint8 Index);
+
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	void ChangeWeapon(const FInputActionValue& Value);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPCSetCurrentWeapon(const uint8 Index);
+	
+	UFUNCTION()
+	void OnRep_CurrentWeapon();
+
+	UFUNCTION()
+	void OnRep_OwnWeapons();
+
+	UFUNCTION()
+	void AttachWeapon(ATACWeapon* TargetWeapon);
+	
+	void PlayChangeWeaponAnimation();
+	
+	virtual void ChangeWeaponCheck() override;
+	
+#pragma endregion 
+	
+#pragma region INPUT
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> FireAction;
@@ -98,6 +158,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> LeaningAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> ChangeWeaponAction;
+
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
@@ -114,17 +177,25 @@ protected:
 	virtual void SetCharacterControlData(const UTACControlData* CharacterControlData) override;
 #pragma endregion
 
-#pragma region Mesh
+#pragma region MESH
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> ArmMesh;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> RoleMesh;
+
 	UPROPERTY(BlueprintReadOnly, Category = Anim)
-	TObjectPtr<class UTACAnimInstance> ArmAnimInstance;
+	TObjectPtr<UTACAnimInstance> ArmAnimInstance;
 	
 	UPROPERTY(BlueprintReadOnly, Category = Anim)
-	TObjectPtr<class UTACAnimInstance> BodyAnimInstance;
+	TObjectPtr<UTACAnimInstance> BodyAnimInstance;
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE USkeletalMeshComponent* GetArmMesh() const { return ArmMesh; }
+
+
 
 #pragma endregion
 	

@@ -2,7 +2,7 @@
 
 
 #include "Animation/AnimNotify_FireHitCheck.h"
-#include "Interface/TACAnimationFireInterface.h"
+#include "Interface/TACAnimationWeaponInterface.h"
 
 void UAnimNotify_FireHitCheck::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
@@ -10,7 +10,7 @@ void UAnimNotify_FireHitCheck::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
 
 	if(MeshComp)
 	{
-		ITACAnimationFireInterface* FiredPawn = Cast<ITACAnimationFireInterface>(MeshComp->GetOwner());
+		ITACAnimationWeaponInterface* FiredPawn = Cast<ITACAnimationWeaponInterface>(MeshComp->GetOwner());
 		if(FiredPawn)
 		{
 			FiredPawn->FireHitCheck();

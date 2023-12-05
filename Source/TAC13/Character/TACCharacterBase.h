@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Interface/TACAnimationFireInterface.h"
+#include "Interface/TACAnimationWeaponInterface.h"
 #include "TACCharacterBase.generated.h"
 
 UCLASS()
-class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationFireInterface
+class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeaponInterface
 {
 	GENERATED_BODY()
 
@@ -57,6 +57,8 @@ public:
 	virtual void OnRep_IsADS();
 	virtual void OnStartADS();
 	virtual void OnEndADS();
+
+	virtual void ChangeWeaponCheck() override;
 	
 //	Crouch Section
 public:
@@ -70,6 +72,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	TObjectPtr<class UAnimMontage> FireCosmeticMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	TObjectPtr<class UAnimMontage> ChangeWeaponMontage;
 
 //	Hit Section
 protected:
