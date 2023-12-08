@@ -56,6 +56,8 @@ protected:
 	
 	virtual void FireHitCheck() override;
 
+	void SetRecoilPoint();
+
 	UPROPERTY(ReplicatedUsing = OnRep_CanFire)
 	uint8 bCanFire : 1;
 	
@@ -82,6 +84,8 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TSubclassOf<ATACWeapon> WeaponToSpawn;
+
+	TObjectPtr<UStaticMeshComponent> GetCurrentSight() const { return CurrentWeapon ? CurrentWeapon->GetSightMesh() : nullptr; }
 	
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE FTransform GetLeftHandTransform() const { return CurrentWeapon->GetMesh()->GetSocketTransform(FName("S_Left_Hand")); }
@@ -113,11 +117,17 @@ protected:
 
 	UFUNCTION()
 	void AttachWeapon(ATACWeapon* TargetWeapon);
+
+	UFUNCTION()
+	void DropWeapon();
+
+	UFUNCTION()
+	void ReloadingWeapon();
 	
 	void PlayChangeWeaponAnimation();
 	
 	virtual void ChangeWeaponCheck() override;
-	
+
 #pragma endregion 
 	
 #pragma region INPUT
@@ -161,6 +171,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> ChangeWeaponAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> ReloadAction;
+
+
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
@@ -175,28 +189,6 @@ protected:
 
 	void SetCharacterControl();
 	virtual void SetCharacterControlData(const UTACControlData* CharacterControlData) override;
-#pragma endregion
-
-#pragma region MESH
-	
-protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<USkeletalMeshComponent> ArmMesh;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<USkeletalMeshComponent> RoleMesh;
-
-	UPROPERTY(BlueprintReadOnly, Category = Anim)
-	TObjectPtr<UTACAnimInstance> ArmAnimInstance;
-	
-	UPROPERTY(BlueprintReadOnly, Category = Anim)
-	TObjectPtr<UTACAnimInstance> BodyAnimInstance;
-
-	UFUNCTION(BlueprintPure)
-	FORCEINLINE USkeletalMeshComponent* GetArmMesh() const { return ArmMesh; }
-
-
-
 #pragma endregion
 	
 };

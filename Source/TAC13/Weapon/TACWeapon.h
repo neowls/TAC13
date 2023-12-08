@@ -57,7 +57,7 @@ public:
 	ATACWeapon();
 
 	FORCEINLINE FTACWeaponStat GetWeaponStat() const { return WeaponStat; }
-	void SetWeaponStat(const FTACWeaponStat& InWeaponStat) { WeaponStat = InWeaponStat; WeaponStat.FireRate = 60 / WeaponStat.FireRate; }
+	void SetWeaponStat(const FTACWeaponStat& InWeaponStat) { WeaponStat = InWeaponStat; }
 
 	virtual void SetOwner(AActor* NewOwner) override;
 
@@ -78,7 +78,7 @@ protected:
 	TObjectPtr<UStaticMeshComponent> Sight;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = Weapon)
-	TObjectPtr<class ATACCharacterPlayer> CurrentOwner;
+	TObjectPtr<ATACCharacterPlayer> CurrentOwner;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_SetWeaponStatData , Category = Stat)
 	FTACWeaponStat WeaponStat;
@@ -89,18 +89,32 @@ protected:
 	UPROPERTY()
 	uint8 CurrentFireModeIdx;
 
-	UPROPERTY()
+	UPROPERTY(VisibleInstanceOnly, Replicated)
 	uint8 CurrentAmmo;
 	
-	UPROPERTY()
+	UPROPERTY(VisibleInstanceOnly, Replicated)
 	uint8 OwnAmmo;
+	
+	UFUNCTION(Server, Reliable)
+	void ServerRPCConsumingAmmo();
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPCReloadingAmmo();
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	void LoadWeaponStatData(FName InName);
+	void LoadWeaponStatData(const FName InName);
 
 	UFUNCTION()
 	void OnRep_SetWeaponStatData();
+
+	UFUNCTION()
+	void ConsumingAmmo();
+
+	UFUNCTION()
+	void ReloadingAmmo();
+
+	FName WeaponName;
 	
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE USkeletalMeshComponent* GetMesh() const { return Mesh; }

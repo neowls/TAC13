@@ -20,7 +20,7 @@ public:
 	static UTACGameSingleton& Get();
 
 public:
-	FORCEINLINE FTACWeaponStat GetWeaponStatData(FName RowName) const { return *WeaponStatTable->FindRow<FTACWeaponStat>(RowName, "WeaponStatDataTable"); }
+	FORCEINLINE FTACWeaponStat GetWeaponStatData(const FName RowName) const { return *WeaponStatTable->FindRow<FTACWeaponStat>(RowName, "WeaponStatDataTable"); }
 
 private:
 	UPROPERTY(VisibleDefaultsOnly)

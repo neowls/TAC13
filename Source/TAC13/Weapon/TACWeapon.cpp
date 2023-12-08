@@ -40,6 +40,8 @@ void ATACWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ATACWeapon, WeaponStat);
+	DOREPLIFETIME(ATACWeapon, OwnAmmo);
+	DOREPLIFETIME(ATACWeapon, CurrentAmmo);
 }
 
 
@@ -48,19 +50,54 @@ void ATACWeapon::BeginPlay()
 	Super::BeginPlay();
 }
 
-void ATACWeapon::LoadWeaponStatData(FName InName)
+void ATACWeapon::ConsumingAmmo()
 {
+	if(CurrentOwner->IsLocallyControlled())
+	ServerRPCConsumingAmmo();
+}
+
+void ATACWeapon::ReloadingAmmo()
+{
+	if(CurrentOwner->IsLocallyControlled())
+	ServerRPCReloadingAmmo();
+}
+
+void ATACWeapon::ServerRPCReloadingAmmo_Implementation()
+{
+	if(OwnAmmo <= 0 || WeaponStat.MaxAmmo == CurrentAmmo)
+	{
+		TAC_LOG(LogTACNetwork, Log, TEXT("No Ammo"));
+		return;
+	}
+	const uint8 WantAmmo = WeaponStat.MaxAmmo - CurrentAmmo;
+	const uint8 RealLoadAmmo = WantAmmo > OwnAmmo ? OwnAmmo : WantAmmo;
+	OwnAmmo -= RealLoadAmmo;
+	CurrentAmmo += RealLoadAmmo;
+}
+
+void ATACWeapon::ServerRPCConsumingAmmo_Implementation()
+{
+	if(CurrentAmmo <= 0)
+	{
+		TAC_LOG(LogTACNetwork, Log, TEXT("Magazine is Empty. Please Reload"));
+		return;
+	}
+	CurrentAmmo--;
+}
+
+void ATACWeapon::LoadWeaponStatData(const FName InName)
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("Begin"));
 	WeaponStat = UTACGameSingleton::Get().GetWeaponStatData(InName);
+	WeaponName = InName;
+	OwnAmmo = WeaponStat.MaxAmmo * 6;
+	CurrentAmmo = WeaponStat.MaxAmmo;
 	OnRep_SetWeaponStatData();
 }
 
 void ATACWeapon::OnRep_SetWeaponStatData()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	Mesh->SetSkeletalMesh(WeaponStat.OwnMesh);
 	CurrentFireMode = WeaponStat.OwnFireMode[0];
 	CurrentFireModeIdx = 0;
-	CurrentAmmo = WeaponStat.MaxAmmo;
-	OwnAmmo = WeaponStat.MaxAmmo * 5;
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
 }

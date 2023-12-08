@@ -21,9 +21,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE class UTACCharacterMovementComponent* GetTACCharacterMovement() const { return TACCharacterMovement; }
-	
-	virtual void PostInitializeComponents() override;
-	
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE USkeletalMeshComponent* GetArmMesh() const { return ArmMesh; }
+
 protected:
 	/** Movement component used for movement logic in various movement modes (walking, falling, etc), containing relevant settings and functions to control movement. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Character, meta = (AllowPrivateAccess = "true"))
@@ -32,6 +33,8 @@ protected:
 	virtual void SetCharacterControlData(const class UTACControlData* CharacterControlData);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual void PostInitializeComponents() override;
 
 	UPROPERTY(VisibleAnywhere, Category = CharacterControl, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UTACControlData> CurrentControlData;
@@ -126,5 +129,25 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, meta=(DisplayName="OnStartSprint", ScriptName="OnStartSprint"))
 	void K2_OnStartSprint();
 
-#pragma endregion 
+#pragma endregion
+
+
+
+#pragma region MESH
+	
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> ArmMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> RoleMesh;
+
+	UPROPERTY(BlueprintReadOnly, Category = Anim)
+	TObjectPtr<class UTACArmAnimInstance> ArmAnimInstance;
+	
+	UPROPERTY(BlueprintReadOnly, Category = Anim)
+	TObjectPtr<class UTACBodyAnimInstance> BodyAnimInstance;
+
+#pragma endregion
+	
 };
