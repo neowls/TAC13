@@ -25,6 +25,7 @@ void UTACAnimInstance::NativeBeginPlay()
 void UTACAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
+	if(!Owner) return;
 	UpdateAimingData();
 }
 

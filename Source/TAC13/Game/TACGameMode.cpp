@@ -5,6 +5,7 @@
 
 #include "TACGameState.h"
 #include "TACPlayerState.h"
+#include "Player/TACHUDBase.h"
 
 ATACGameMode::ATACGameMode()
 {
@@ -20,8 +21,15 @@ ATACGameMode::ATACGameMode()
 		PlayerControllerClass = PlayerControllerClassRef.Class;
 	}
 
+	static ConstructorHelpers::FClassFinder<ATACHUDBase> HUDClassRef(TEXT("/Script/Engine.Blueprint'/Game/_TAC/UI/BP_HUD.BP_HUD_C'"));
+	if (HUDClassRef.Class)
+	{
+		HUDClass = HUDClassRef.Class;
+	}
+
 	GameStateClass = ATACGameState::StaticClass();
 	PlayerStateClass = ATACPlayerState::StaticClass();
+
 }
 
 void ATACGameMode::StartPlay()

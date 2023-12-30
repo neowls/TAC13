@@ -2,7 +2,6 @@
 
 
 #include "TACCharacterBase.h"
-
 #include "TAC13.h"
 #include "TACCharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
@@ -59,6 +58,9 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	CameraProneHeight = 34.f;
 	Camera->SetRelativeLocation(FVector(0.f,0.f,CameraStandHeight));
 	Camera->bUsePawnControlRotation = true;
+
+	MaxHP = 100;
+	CurrentHP = MaxHP;
 } 
 
 void ATACCharacterBase::PostInitializeComponents()
@@ -81,6 +83,7 @@ void ATACCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	
 	DOREPLIFETIME_CONDITION(ThisClass, bIsSprinting, COND_SimulatedOnly);
 	DOREPLIFETIME_CONDITION(ThisClass, bIsADS, COND_SimulatedOnly);
+	DOREPLIFETIME_CONDITION(ThisClass, CurrentHP, COND_SimulatedOnly);
 }
 
 void ATACCharacterBase::OnRep_IsADS()
@@ -112,6 +115,11 @@ void ATACCharacterBase::OnEndADS()
 }
 
 void ATACCharacterBase::ChangeWeaponCheck()
+{
+	
+}
+
+void ATACCharacterBase::OnRep_CurrentHP()
 {
 	
 }

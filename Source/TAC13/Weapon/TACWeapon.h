@@ -59,6 +59,12 @@ public:
 	FORCEINLINE FTACWeaponStat GetWeaponStat() const { return WeaponStat; }
 	void SetWeaponStat(const FTACWeaponStat& InWeaponStat) { WeaponStat = InWeaponStat; }
 
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE uint8 GetCurrentAmmo() const { return CurrentAmmo; }
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE uint8 GetOwnAmmo() const { return OwnAmmo; }
+
 	virtual void SetOwner(AActor* NewOwner) override;
 
 	void ChangeFireMode();
@@ -114,6 +120,7 @@ public:
 	UFUNCTION()
 	void ReloadingAmmo();
 
+	UPROPERTY(BlueprintReadOnly)
 	FName WeaponName;
 	
 	UFUNCTION(BlueprintPure)

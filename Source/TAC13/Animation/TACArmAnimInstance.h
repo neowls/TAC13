@@ -17,6 +17,8 @@ protected:
 	
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
+	virtual void NativeThreadSafeUpdateAnimation(float DeltaSeconds) override;
+
 	// Value Section
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<class ATACCharacterPlayer> OwnerPlayer;

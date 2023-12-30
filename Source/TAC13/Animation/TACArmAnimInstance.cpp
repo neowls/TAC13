@@ -21,12 +21,18 @@ void UTACArmAnimInstance::NativeBeginPlay()
 void UTACArmAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
+}
+
+void UTACArmAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
+{
+	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 	if(!Owner) return;
 	if(bInterpAiming) InterpAiming();
 	if(bADSStateChange)
 	{
 		bInterpAiming = true;
 	}
+	SetLeftHandTransform();
 }
 
 
@@ -43,9 +49,7 @@ void UTACArmAnimInstance::SetSightTransform()
 {
 	const FTransform CamTransform = OwnerPlayer->GetCameraComponent()->GetComponentTransform();
 	const FTransform MeshTransform = OwnerPlayer->GetArmMesh()->GetComponentTransform();
-	
 	SightTransform = UKismetMathLibrary::MakeRelativeTransform(CamTransform,MeshTransform);
-
 	SightTransform.SetLocation(SightTransform.GetLocation() + SightTransform.GetRotation().Vector() * 30.0f);
 }
 

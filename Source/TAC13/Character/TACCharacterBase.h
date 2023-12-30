@@ -25,6 +25,12 @@ public:
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE USkeletalMeshComponent* GetArmMesh() const { return ArmMesh; }
 
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE uint8 GetCurrentHP() const { return CurrentHP; }
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE uint8 GetMaxHP() const { return MaxHP; }
+
 protected:
 	/** Movement component used for movement logic in various movement modes (walking, falling, etc), containing relevant settings and functions to control movement. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Character, meta = (AllowPrivateAccess = "true"))
@@ -50,6 +56,12 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly, Category = Camera)
 	float CameraProneHeight;
+
+	UPROPERTY(BlueprintReadOnly, replicatedUsing=OnRep_CurrentHP, Category = Status)
+	uint8 CurrentHP;
+
+	UPROPERTY(EditInstanceOnly, Category = Status)
+	uint8 MaxHP;
 	
 public:
 	UPROPERTY(BlueprintReadOnly, replicatedUsing=OnRep_IsADS, Category = Aiming)
@@ -60,8 +72,10 @@ public:
 	virtual void OnRep_IsADS();
 	virtual void OnStartADS();
 	virtual void OnEndADS();
-
 	virtual void ChangeWeaponCheck() override;
+
+	UFUNCTION(BlueprintCallable)
+	void OnRep_CurrentHP();
 	
 //	Crouch Section
 public:
@@ -75,6 +89,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	TObjectPtr<class UAnimMontage> FireCosmeticMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	TObjectPtr<class UAnimMontage> FireMontage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	TObjectPtr<class UAnimMontage> ChangeWeaponMontage;

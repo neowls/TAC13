@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Character/TACCharacterPlayer.h"
 #include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
@@ -8,6 +7,7 @@
 #include "TAC13.h"
 #include "TACCharacterMovementComponent.h"
 #include "Animation/TACAnimInstance.h"
+#include "Animation/TACArmAnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/DamageEvents.h"
 #include "GameFramework/GameStateBase.h"
@@ -71,9 +71,11 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	if(nullptr != ConstructorStatics.InputActionLeaningRef.Object) LeaningAction = ConstructorStatics.InputActionLeaningRef.Object;
 	if(nullptr != ConstructorStatics.InputActionReloadRef.Object) ReloadAction = ConstructorStatics.InputActionReloadRef.Object;
 
+	
 	//	Capsule Section
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 86.0f);
 	GetCapsuleComponent()->SetCollisionProfileName(TEXT("Pawn"));
+
 	
 	// Arm Mesh Section
 	ArmMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Arm"));
@@ -86,6 +88,7 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	ArmMesh->SetRelativeLocation(FVector(0.f,0.f,-160.f));
 	ArmMesh->SetRelativeRotation(FRotator(0.f,-90.f,0.f));
 
+	
 	//	Character Mesh Section
 	GetMesh()->SetRelativeLocationAndRotation(FVector(0.0f, 0.0f, -86.0f), FRotator(0.0f, -90.0f, 0.0f));
 	GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
@@ -96,26 +99,30 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	GetMesh()->bCastDynamicShadow = true;
 
 	RoleMesh = GetMesh();
+	FireMontage = FireCosmeticMontage;
+
 	
 	//	Pawn Section
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
-
 	bCanFire = true;
 }
 
 void ATACCharacterPlayer::BeginPlay()
 {
 	Super::BeginPlay();
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		EnableInput(PlayerController);
 	}
 	
-	if(IsLocallyControlled()) RoleMesh = ArmMesh;
-	
+	if(IsLocallyControlled())
+	{
+		RoleMesh = ArmMesh;
+		FireMontage = FireArmMontage;
+	}
+	ArmAnimInstance = Cast<UTACArmAnimInstance>(ArmMesh->GetAnimInstance());
 	SetCharacterControl();
 	if(HasAuthority())
 	{
@@ -167,14 +174,14 @@ void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 float ATACCharacterPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	CurrentHP = FMath::Clamp(CurrentHP - ActualDamage, 0, MaxHP);
 	TAC_LOG(LogTACNetwork, Log, TEXT("Player %f Damage Taken from : %s"), DamageAmount, *Cast<ATACCharacterPlayer>(DamageCauser)->CurrentWeapon->WeaponName.ToString());
-	
 	return ActualDamage;
 }
 
 void ATACCharacterPlayer::ServerRPCNotifyHit_Implementation(const FHitResult& HitResult, float HitCheckTime)
 {
-	AActor* HitActor = HitResult.GetActor();
+	const AActor* HitActor = HitResult.GetActor();
 	if(::IsValid(HitActor))
 	{
 		const float DotValue = GetDotProductTo(HitActor);
@@ -222,6 +229,10 @@ void ATACCharacterPlayer::SetCharacterControlData(const UTACControlData* Charact
 
 void ATACCharacterPlayer::Fire(const FInputActionValue& Value)
 {
+	if(CurrentWeapon->GetCurrentAmmo() <= 0)
+	{
+		return;
+	}
 	if(bCanFire)
 	{
 		if(!HasAuthority())
@@ -250,14 +261,11 @@ void ATACCharacterPlayer::FireHitCheck()
 {
 	if(IsLocallyControlled())
 	{
-		//TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 		FHitResult OutHitResult;
 		const FVector SpreadVector = bIsADS ? FVector::Zero() : FMath::VRand() * 0.05f;
-		TAC_LOG(LogTACNetwork, Log, TEXT("Spread Vector : %s"), *SpreadVector.ToString())
 		const FVector Start = Camera->GetComponentLocation();
 		const FVector End = Start + (Camera->GetForwardVector() + SpreadVector) * 10000.0f;
 		const TArray<AActor*> ActorsToIgnore;
-		TAC_LOG(LogTACNetwork, Log, TEXT("Camera Forward : %s"), *Camera->GetForwardVector().ToString())
 		const bool bHit = UKismetSystemLibrary::LineTraceSingle(this, Start, End, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 			true, ActorsToIgnore, EDrawDebugTrace::ForDuration, OutHitResult, true, FLinearColor::Yellow, FLinearColor::Green, 2.0f);
 		const float HitCheckTime = GetWorld()->GetGameState()->GetServerWorldTimeSeconds();
@@ -302,7 +310,7 @@ void ATACCharacterPlayer::FireHitConfirm(const FHitResult& HitResult)
 void ATACCharacterPlayer::PlayFireAnimation()
 {
 	RoleMesh->GetAnimInstance()->StopAllMontages(0.0f);
-	RoleMesh->GetAnimInstance()->Montage_Play(FireCosmeticMontage);
+	RoleMesh->GetAnimInstance()->Montage_Play(FireMontage);
 	CurrentWeapon->ConsumingAmmo();
 }
 
@@ -328,6 +336,7 @@ bool ATACCharacterPlayer::ServerRPCFire_Validate(float FireStartTime)
 
 void ATACCharacterPlayer::MulticastRPCFire_Implementation()
 {
+	
 	if(!IsLocallyControlled())
 	{
 		PlayFireAnimation();
@@ -405,6 +414,7 @@ void ATACCharacterPlayer::EquipWeapon(const uint8 Index)
 	CurrentWeapon = OwnWeapons[Index];
 	FireTime = 60 / CurrentWeapon->GetWeaponStat().FireRate;
 	OnRep_CurrentWeapon();
+	ArmAnimInstance->SetNewSight();
 }
 
 

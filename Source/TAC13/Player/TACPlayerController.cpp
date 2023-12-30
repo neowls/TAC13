@@ -18,4 +18,5 @@ void ATACPlayerController::BeginPlay()
 	
 	const FInputModeGameOnly GameOnlyInputMode;
 	SetInputMode(GameOnlyInputMode);
+	
 }
