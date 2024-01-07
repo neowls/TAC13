@@ -6,6 +6,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "TAC13.h"
 #include "TACCharacterMovementComponent.h"
+#include "TACCharacterStatComponent.h"
 #include "Animation/TACAnimInstance.h"
 #include "Animation/TACArmAnimInstance.h"
 #include "Camera/CameraComponent.h"
@@ -14,6 +15,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "UI/TACHUDWidget.h"
 #include "Weapon/TACWeapon.h"
 
 #define CONSTRUCT_IA ConstructorHelpers::FObjectFinder<UInputAction>
@@ -174,7 +176,6 @@ void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 float ATACCharacterPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	CurrentHP = FMath::Clamp(CurrentHP - ActualDamage, 0, MaxHP);
 	TAC_LOG(LogTACNetwork, Log, TEXT("Player %f Damage Taken from : %s"), DamageAmount, *Cast<ATACCharacterPlayer>(DamageCauser)->CurrentWeapon->WeaponName.ToString());
 	return ActualDamage;
 }
@@ -508,4 +509,16 @@ void ATACCharacterPlayer::ChangeFireMode()
 {
 	CurrentWeapon->ChangeFireMode();
 	
+}
+
+void ATACCharacterPlayer::SetupHUDWidget(UTACHUDWidget* InHUDWidget)
+{
+	if(InHUDWidget)
+	{
+		InHUDWidget->UpdateHPBar(Stat->GetCurrentHP());
+		InHUDWidget->UpdateOwnAmmo(CurrentWeapon->GetOwnAmmo());
+		InHUDWidget->UpdateCurrentAmmo(CurrentWeapon->GetCurrentAmmo());
+
+		Stat->OnHPChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateHPBar);
+	}
 }

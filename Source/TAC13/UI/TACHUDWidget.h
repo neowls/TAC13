@@ -13,5 +13,22 @@ UCLASS()
 class TAC13_API UTACHUDWidget : public UUserWidget
 {
 	GENERATED_BODY()
+
+public:
+	UTACHUDWidget(const FObjectInitializer& ObjectInitializer);
+
+public:
+	void UpdateCurrentAmmo(uint8 NewCurrentAmmo);
+	void UpdateOwnAmmo(uint8 NewOwnAmmo);
+	void UpdateHPBar(uint8 NewCurrentHP);
 	
+protected:
+	virtual void NativeConstruct() override;
+
+protected:
+	UPROPERTY()
+	TObjectPtr<class UTACHPWidget> HPBar;
+
+	UPROPERTY()
+	TObjectPtr<class UTACWeaponWidget> WeaponStat;
 };

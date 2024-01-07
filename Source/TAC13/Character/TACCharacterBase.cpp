@@ -4,6 +4,7 @@
 #include "TACCharacterBase.h"
 #include "TAC13.h"
 #include "TACCharacterMovementComponent.h"
+#include "TACCharacterStatComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -59,14 +60,31 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	Camera->SetRelativeLocation(FVector(0.f,0.f,CameraStandHeight));
 	Camera->bUsePawnControlRotation = true;
 
-	MaxHP = 100;
-	CurrentHP = MaxHP;
+	//	Stat Component
+	Stat = CreateDefaultSubobject<UTACCharacterStatComponent>(TEXT("Stat"));
 } 
 
 void ATACCharacterBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+	Stat->OnHPZero.AddUObject(this, &ATACCharacterBase::SetDead);
 }
+
+float ATACCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	Stat->ApplyDamage(DamageAmount);
+	return DamageAmount;
+}
+
+void ATACCharacterBase::SetDead()
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("Character Dead"));
+	GetTACCharacterMovement()->SetMovementMode(MOVE_None);
+	PlayDeadAnimation();
+	SetActorEnableCollision(false);
+}
+
 
 void ATACCharacterBase::SetCharacterControlData(const UTACControlData* CharacterControlData)
 {
@@ -83,7 +101,6 @@ void ATACCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	
 	DOREPLIFETIME_CONDITION(ThisClass, bIsSprinting, COND_SimulatedOnly);
 	DOREPLIFETIME_CONDITION(ThisClass, bIsADS, COND_SimulatedOnly);
-	DOREPLIFETIME_CONDITION(ThisClass, CurrentHP, COND_SimulatedOnly);
 }
 
 void ATACCharacterBase::OnRep_IsADS()
@@ -119,9 +136,11 @@ void ATACCharacterBase::ChangeWeaponCheck()
 	
 }
 
-void ATACCharacterBase::OnRep_CurrentHP()
+void ATACCharacterBase::PlayDeadAnimation()
 {
-	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	AnimInstance->StopAllMontages(0.0f);
+	//AnimInstance->Montage_Play(DeadMontage, 1.0f);
 }
 
 void ATACCharacterBase::FireHitCheck()
@@ -216,4 +235,10 @@ void ATACCharacterBase::OnStartSprint()
 	K2_OnStartSprint();
 	
 }
+
 #pragma endregion 
+
+void ATACCharacterBase::SetupCharacterWidget(UTACUserWidget* InUserWidget)
+{
+	
+}

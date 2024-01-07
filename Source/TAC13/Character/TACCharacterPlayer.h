@@ -6,6 +6,7 @@
 #include "Character/TACCharacterBase.h"
 #include "InputActionValue.h"
 #include "Weapon/TACWeapon.h"
+#include "Interface/TACCharacterHUDInterface.h"
 #include "TACCharacterPlayer.generated.h"
 
 class UTACAnimInstance;
@@ -13,7 +14,7 @@ class UTACAnimInstance;
  * 
  */
 UCLASS()
-class TAC13_API ATACCharacterPlayer : public ATACCharacterBase
+class TAC13_API ATACCharacterPlayer : public ATACCharacterBase, public ITACCharacterHUDInterface
 {
 	GENERATED_BODY()
 	
@@ -190,5 +191,7 @@ protected:
 	void SetCharacterControl();
 	virtual void SetCharacterControlData(const UTACControlData* CharacterControlData) override;
 #pragma endregion
-	
+
+protected:
+	virtual void SetupHUDWidget(class UTACHUDWidget* InHUDWidget) override;
 };

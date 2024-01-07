@@ -13,10 +13,13 @@ UCLASS()
 class TAC13_API UTACUserWidget : public UUserWidget
 {
 	GENERATED_BODY()
+
+public:
+	FORCEINLINE void SetOwningActor(AActor* NewOwner) { OwningActor = NewOwner; }
 	
 protected:
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<class ATACCharacterPlayer> WidgetOwner;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Actor")
+	TObjectPtr<AActor> OwningActor;
 
 	
 };

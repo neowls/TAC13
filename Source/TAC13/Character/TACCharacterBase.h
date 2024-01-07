@@ -5,10 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interface/TACAnimationWeaponInterface.h"
+#include "Interface/TACCharacterWidgetInterface.h"
 #include "TACCharacterBase.generated.h"
 
 UCLASS()
-class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeaponInterface
+class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeaponInterface, public ITACCharacterWidgetInterface
 {
 	GENERATED_BODY()
 
@@ -25,11 +26,6 @@ public:
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE USkeletalMeshComponent* GetArmMesh() const { return ArmMesh; }
 
-	UFUNCTION(BlueprintPure)
-	FORCEINLINE uint8 GetCurrentHP() const { return CurrentHP; }
-
-	UFUNCTION(BlueprintPure)
-	FORCEINLINE uint8 GetMaxHP() const { return MaxHP; }
 
 protected:
 	/** Movement component used for movement logic in various movement modes (walking, falling, etc), containing relevant settings and functions to control movement. */
@@ -41,6 +37,10 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void PostInitializeComponents() override;
+
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	virtual void SetDead();
 
 	UPROPERTY(VisibleAnywhere, Category = CharacterControl, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UTACControlData> CurrentControlData;
@@ -57,12 +57,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = Camera)
 	float CameraProneHeight;
 
-	UPROPERTY(BlueprintReadOnly, replicatedUsing=OnRep_CurrentHP, Category = Status)
-	uint8 CurrentHP;
-
-	UPROPERTY(EditInstanceOnly, Category = Status)
-	uint8 MaxHP;
-	
 public:
 	UPROPERTY(BlueprintReadOnly, replicatedUsing=OnRep_IsADS, Category = Aiming)
 	uint8 bIsADS : 1;
@@ -74,9 +68,7 @@ public:
 	virtual void OnEndADS();
 	virtual void ChangeWeaponCheck() override;
 
-	UFUNCTION(BlueprintCallable)
-	void OnRep_CurrentHP();
-	
+	void PlayDeadAnimation();
 //	Crouch Section
 public:
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
@@ -95,6 +87,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
 	TObjectPtr<class UAnimMontage> ChangeWeaponMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	TObjectPtr<class UAnimMontage> DeadMontage;
 
 //	Hit Section
 protected:
@@ -166,5 +161,12 @@ protected:
 	TObjectPtr<class UTACBodyAnimInstance> BodyAnimInstance;
 
 #pragma endregion
-	
+
+//	Stat Section
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Stat, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UTACCharacterStatComponent> Stat;
+
+//	UI Widget Section
+protected:
+	virtual void SetupCharacterWidget(UTACUserWidget* InUserWidget) override;
 };
