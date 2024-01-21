@@ -38,10 +38,6 @@ protected:
 	void UpdateAccelerationData();
 	
 	UFUNCTION(BlueprintCallable, Category = Update)
-	void UpdateCharacterStateData();
-	
-
-	UFUNCTION(BlueprintCallable, Category = Update)
 	void UpdateLocationData(float DeltaTime);
 
 	UFUNCTION(BlueprintCallable, Category = Update)
@@ -83,8 +79,6 @@ protected:
 	float TimeFalling;
 
 //	Velocity Data
-	UPROPERTY(BlueprintReadOnly, Category = Velocity)
-	FVector WorldVelocity;
 
 	UPROPERTY(BlueprintReadOnly, Category = Velocity)
 	FVector LocalVelocity2D;
@@ -132,29 +126,7 @@ protected:
 	
 	
 
-//	State Data
-	UPROPERTY(BlueprintReadOnly, Category = State)
-	uint8 bIsCrouching : 1;
 
-	UPROPERTY(BlueprintReadOnly, Category = State)
-	uint8 bIsSprint : 1;
-
-	UPROPERTY(BlueprintReadOnly, Category = State)
-	uint8 bIsJumping : 1;
-	
-	UPROPERTY(BlueprintReadOnly, Category = State)
-	uint8 bIsFalling : 1;
-
-
-
-	UPROPERTY(BlueprintReadOnly, Category = State)
-	uint8 bIsOnGround : 1;
-
-	UPROPERTY(BlueprintReadOnly, Category = State)
-	uint8 bCrouchStateChange : 1;
-
-	UPROPERTY(BlueprintReadOnly, Category = State)
-	float TimeToJumpApex;
 
 
 //	Locomotion SM Data

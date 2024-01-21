@@ -189,7 +189,7 @@ bool UTACCharacterMovementComponent::CanSprintInCurrentState() const
 		return false;
 	}
 
-	if (!IsFalling() && !IsMovingOnGround())
+	if (IsFalling() && !IsMovingOnGround())
 	{
 		return false;
 	}

@@ -32,14 +32,21 @@ public:
 	
 	
 protected:
-	void SetHP(uint8 NewHP);
+	virtual void ReadyForReplication() override;
 	
-	UPROPERTY(Transient, VisibleInstanceOnly, Category = Stat)
+	void SetHP(int8 NewHP);
+	
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentHP, Transient, VisibleInstanceOnly, Category = Stat)
 	uint8 CurrentHP;
 	
 	UPROPERTY(VisibleInstanceOnly, Category = Stat)
 	uint8 MaxHP;
 
-	
+
+protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION()
+	void OnRep_CurrentHP();
 		
 };

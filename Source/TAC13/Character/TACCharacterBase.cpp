@@ -80,7 +80,6 @@ float ATACCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 void ATACCharacterBase::SetDead()
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("Character Dead"));
-	GetTACCharacterMovement()->SetMovementMode(MOVE_None);
 	PlayDeadAnimation();
 	SetActorEnableCollision(false);
 }
@@ -123,12 +122,12 @@ void ATACCharacterBase::OnRep_IsADS()
 
 void ATACCharacterBase::OnStartADS()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("begin"));
+	
 }
 
 void ATACCharacterBase::OnEndADS()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("begin"));
+	
 }
 
 void ATACCharacterBase::ChangeWeaponCheck()
@@ -240,5 +239,5 @@ void ATACCharacterBase::OnStartSprint()
 
 void ATACCharacterBase::SetupCharacterWidget(UTACUserWidget* InUserWidget)
 {
-	
+
 }

@@ -180,6 +180,16 @@ float ATACCharacterPlayer::TakeDamage(float DamageAmount, FDamageEvent const& Da
 	return ActualDamage;
 }
 
+void ATACCharacterPlayer::SetDead()
+{
+	Super::SetDead();
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		DisableInput(PlayerController);
+		PlayerController->SetShowMouseCursor(true);
+	}
+}
+
 void ATACCharacterPlayer::ServerRPCNotifyHit_Implementation(const FHitResult& HitResult, float HitCheckTime)
 {
 	const AActor* HitActor = HitResult.GetActor();
@@ -230,11 +240,7 @@ void ATACCharacterPlayer::SetCharacterControlData(const UTACControlData* Charact
 
 void ATACCharacterPlayer::Fire(const FInputActionValue& Value)
 {
-	if(CurrentWeapon->GetCurrentAmmo() <= 0)
-	{
-		return;
-	}
-	if(bCanFire)
+	if(bCanFire && IsCanFire())
 	{
 		if(!HasAuthority())
 		{
@@ -255,6 +261,12 @@ void ATACCharacterPlayer::OnRep_CanFire()
 void ATACCharacterPlayer::ResetFire()
 {
 	bCanFire = true;
+}
+
+bool ATACCharacterPlayer::IsCanFire()
+{
+	if(bIsSprinting || CurrentWeapon->GetCurrentAmmo() <= 0) return false;
+	return true;
 }
 
 
@@ -516,8 +528,8 @@ void ATACCharacterPlayer::SetupHUDWidget(UTACHUDWidget* InHUDWidget)
 	if(InHUDWidget)
 	{
 		InHUDWidget->UpdateHPBar(Stat->GetCurrentHP());
-		InHUDWidget->UpdateOwnAmmo(CurrentWeapon->GetOwnAmmo());
-		InHUDWidget->UpdateCurrentAmmo(CurrentWeapon->GetCurrentAmmo());
+		//InHUDWidget->UpdateOwnAmmo(CurrentWeapon->GetOwnAmmo());
+		//InHUDWidget->UpdateCurrentAmmo(CurrentWeapon->GetCurrentAmmo());
 
 		Stat->OnHPChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateHPBar);
 	}

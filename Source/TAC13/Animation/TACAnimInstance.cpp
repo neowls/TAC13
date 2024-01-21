@@ -2,6 +2,7 @@
 
 #include "TACAnimInstance.h"
 #include "Character/TACCharacterPlayer.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UTACAnimInstance::UTACAnimInstance()
 {
@@ -27,6 +28,7 @@ void UTACAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 	if(!Owner) return;
 	UpdateAimingData();
+	UpdateCharacterStateData();
 }
 
 void UTACAnimInstance::UpdateAimingData()
@@ -34,4 +36,21 @@ void UTACAnimInstance::UpdateAimingData()
 	AimPitch = FRotator::NormalizeAxis(Owner->GetBaseAimRotation().Pitch);
 	bADSStateChange = Owner->bIsADS != bWasADSLastUpdate;
 	bWasADSLastUpdate = Owner->bIsADS;
+}
+
+void UTACAnimInstance::UpdateCharacterStateData()
+{
+	WorldVelocity = Owner->GetVelocity();
+	bIsOnGround = Owner->GetCharacterMovement()->IsMovingOnGround();
+	const bool WasCrouchingLastUpdate = bIsCrouching;
+	bIsCrouching = Owner->GetCharacterMovement()->IsCrouching();
+	bCrouchStateChange = (bIsCrouching != WasCrouchingLastUpdate);
+	bIsSprint = Owner->bIsSprinting;
+	bIsJumping = false;
+	bIsFalling = false;
+	if(Owner->GetCharacterMovement()->MovementMode == MOVE_Falling)
+	{
+		if(WorldVelocity.Z > 0.f) bIsJumping = true;
+		else bIsFalling = true;
+	}
 }

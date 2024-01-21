@@ -24,10 +24,12 @@ void ATACPlayerController::BeginPlay()
 	
 	const FInputModeGameOnly GameOnlyInputMode;
 	SetInputMode(GameOnlyInputMode);
-
-	TACHUDWidget = CreateWidget<UTACHUDWidget>(this, TACHUDWidgetClass);
-	if(TACHUDWidget)
+	if(IsLocalPlayerController())
 	{
-		TACHUDWidget->AddToViewport();
+		TACHUDWidget = CreateWidget<UTACHUDWidget>(this, TACHUDWidgetClass);
+		if(TACHUDWidget)
+		{
+			TACHUDWidget->AddToViewport();
+		}
 	}
 }

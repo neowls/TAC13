@@ -32,6 +32,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = Update)
 	void UpdateAimingData();
+
+	UFUNCTION(BlueprintCallable, Category = Update)
+	void UpdateCharacterStateData();
 	
 	
 protected:
@@ -41,6 +44,10 @@ protected:
 	// Value Section
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<ATACCharacterBase> Owner;
+
+	//	Velocity Data
+	UPROPERTY(BlueprintReadOnly, Category = Velocity)
+	FVector WorldVelocity;
 	
 
 	//	Aiming Data
@@ -59,5 +66,27 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = State)
 	uint8 bWasADSLastUpdate : 1;
+
+	//	State Data
+	UPROPERTY(BlueprintReadOnly, Category = State)
+	uint8 bIsCrouching : 1;
+
+	UPROPERTY(BlueprintReadOnly, Category = State)
+	uint8 bIsSprint : 1;
+
+	UPROPERTY(BlueprintReadOnly, Category = State)
+	uint8 bIsJumping : 1;
+	
+	UPROPERTY(BlueprintReadOnly, Category = State)
+	uint8 bIsFalling : 1;
+	
+	UPROPERTY(BlueprintReadOnly, Category = State)
+	uint8 bIsOnGround : 1;
+
+	UPROPERTY(BlueprintReadOnly, Category = State)
+	uint8 bCrouchStateChange : 1;
+
+	UPROPERTY(BlueprintReadOnly, Category = State)
+	float TimeToJumpApex;
 	
 };

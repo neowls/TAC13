@@ -32,6 +32,8 @@ protected:
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	virtual void SetDead() override;
+
 #pragma region FIRE
 
 public:
@@ -41,6 +43,9 @@ public:
 protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPCFire(float FireStartTime);
+
+	UFUNCTION()
+	bool IsCanFire();
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastRPCFire();

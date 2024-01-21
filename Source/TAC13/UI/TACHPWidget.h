@@ -21,13 +21,18 @@ protected:
 	virtual void NativeConstruct() override;
 	
 public:
-	FORCEINLINE void SetMaxHP(uint8 NewMaxHP) { MaxHP = NewMaxHP; }
 	void UpdateHP(uint8 NewCurrentHP);
+	FString GetHPText();
 	
 protected:
 	UPROPERTY()
 	TObjectPtr<class UProgressBar> HPProgressBar;
-	
+
 	UPROPERTY()
-	uint8 MaxHP;
+	TObjectPtr<class UTextBlock> HPText;
+	
+	const uint8 MaxHP = 100;
+
+	UPROPERTY()
+	uint8 CurrentHP;
 };

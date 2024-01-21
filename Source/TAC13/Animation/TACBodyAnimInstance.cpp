@@ -29,7 +29,6 @@ void UTACBodyAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 	UpdateRotationData(DeltaSeconds);
 	UpdateVelocityData();
 	UpdateAccelerationData();
-	UpdateCharacterStateData();
 	UpdateRootYawOffset(DeltaSeconds);
 	UpdateJumpFallData(DeltaSeconds);
 	UpdateGroundData();
@@ -119,8 +118,6 @@ void UTACBodyAnimInstance::UpdateVelocityData()
 	LocalVelocityDirectionAngleWithOffset = LocalVelocityDirectionAngle - RootYawOffset;
 	bHasVelocity = !UKismetMathLibrary::NearlyEqual_FloatFloat(UKismetMathLibrary::VSizeXYSquared(LocalVelocity2D), 0.0f);
 	GroundSpeed = WorldVelocity2D.Length();
-
-	
 }
 
 void UTACBodyAnimInstance::UpdateAccelerationData()
@@ -131,21 +128,7 @@ void UTACBodyAnimInstance::UpdateAccelerationData()
 	PivotDirection2D = UKismetMathLibrary::VLerp(PivotDirection2D, WorldAcceleration2D.GetSafeNormal(0.0001), 0.5f).GetSafeNormal(0.0001);
 }
 
-void UTACBodyAnimInstance::UpdateCharacterStateData()
-{
-	bIsOnGround = Owner->GetCharacterMovement()->IsMovingOnGround();
-	const bool WasCrouchingLastUpdate = bIsCrouching;
-	bIsCrouching = Owner->GetCharacterMovement()->IsCrouching();
-	bCrouchStateChange = (bIsCrouching != WasCrouchingLastUpdate);
-	bIsSprint = Owner->bIsSprinting;
-	bIsJumping = false;
-	bIsFalling = false;
-	if(Owner->GetCharacterMovement()->MovementMode == MOVE_Falling)
-	{
-		if(WorldVelocity.Z > 0.f) bIsJumping = true;
-		else bIsFalling = true;
-	}
-}
+
 
 void UTACBodyAnimInstance::UpdateRootYawOffset(float DeltaTime)
 {

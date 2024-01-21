@@ -29,6 +29,12 @@ public:
 
 protected:
 	UPROPERTY()
+	TObjectPtr<class UTextBlock> OwnAmmoTextBlock;
+
+	UPROPERTY()
+	TObjectPtr<class UTextBlock> CurrentAmmoTextBlock;
+	
+	UPROPERTY()
 	uint8 CurrentAmmo;
 
 	UPROPERTY()

@@ -2,6 +2,7 @@
 
 
 #include "UI/TACHUDWidget.h"
+
 #include "Interface/TACCharacterHUDInterface.h"
 #include "TACHPWidget.h"
 #include "TACWeaponWidget.h"
@@ -23,6 +24,7 @@ void UTACHUDWidget::UpdateOwnAmmo(uint8 NewOwnAmmo)
 
 void UTACHUDWidget::UpdateHPBar(uint8 NewCurrentHP)
 {
+		
 	HPBar->UpdateHP(NewCurrentHP);
 }
 
