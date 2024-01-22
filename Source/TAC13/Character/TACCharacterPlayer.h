@@ -24,6 +24,8 @@ public:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 protected:
+	virtual void PostInitializeComponents() override;
+	
 	virtual void BeginPlay() override;
 	
 	virtual void PossessedBy(AController* NewController) override;
@@ -199,4 +201,5 @@ protected:
 
 protected:
 	virtual void SetupHUDWidget(class UTACHUDWidget* InHUDWidget) override;
+
 };

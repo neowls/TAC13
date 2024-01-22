@@ -20,6 +20,7 @@ public:
 public:
 	void UpdateCurrentAmmo(uint8 NewCurrentAmmo);
 	void UpdateOwnAmmo(uint8 NewOwnAmmo);
+	void UpdateWeaponName(FName NewWeaponName);
 	void UpdateHPBar(uint8 NewCurrentHP);
 	
 protected:

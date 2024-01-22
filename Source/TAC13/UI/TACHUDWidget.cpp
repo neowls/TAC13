@@ -22,6 +22,11 @@ void UTACHUDWidget::UpdateOwnAmmo(uint8 NewOwnAmmo)
 	WeaponStat->UpdateOwnAmmo(NewOwnAmmo);
 }
 
+void UTACHUDWidget::UpdateWeaponName(FName NewWeaponName)
+{
+	WeaponStat->UpdateWeaponName(NewWeaponName);
+}
+
 void UTACHUDWidget::UpdateHPBar(uint8 NewCurrentHP)
 {
 		

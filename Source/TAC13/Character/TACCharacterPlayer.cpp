@@ -15,6 +15,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Player/TACPlayerController.h"
 #include "UI/TACHUDWidget.h"
 #include "Weapon/TACWeapon.h"
 
@@ -162,6 +163,11 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 }
 
+void ATACCharacterPlayer::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+}
+
 void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -176,7 +182,7 @@ void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 float ATACCharacterPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	TAC_LOG(LogTACNetwork, Log, TEXT("Player %f Damage Taken from : %s"), DamageAmount, *Cast<ATACCharacterPlayer>(DamageCauser)->CurrentWeapon->WeaponName.ToString());
+	TAC_LOG(LogTACNetwork, Log, TEXT("Player %f Damage Taken from : %s"), DamageAmount, *Cast<ATACCharacterPlayer>(DamageCauser)->CurrentWeapon->GetWeaponName().ToString());
 	return ActualDamage;
 }
 
@@ -325,6 +331,7 @@ void ATACCharacterPlayer::PlayFireAnimation()
 	RoleMesh->GetAnimInstance()->StopAllMontages(0.0f);
 	RoleMesh->GetAnimInstance()->Montage_Play(FireMontage);
 	CurrentWeapon->ConsumingAmmo();
+	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
 }
 
 void ATACCharacterPlayer::ServerRPCFire_Implementation(float FireStartTime)
@@ -389,6 +396,8 @@ void ATACCharacterPlayer::DropWeapon()
 void ATACCharacterPlayer::ReloadingWeapon()
 {
 	CurrentWeapon->ReloadingAmmo();
+	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
+	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
 }
 
 
@@ -406,6 +415,9 @@ void ATACCharacterPlayer::OnRep_OwnWeapons()
 void ATACCharacterPlayer::OnRep_CurrentWeapon()
 {
 	CurrentWeapon->SetActorHiddenInGame(false);
+	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
+	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
+	OnWeaponNameChanged.Broadcast(CurrentWeapon->GetWeaponName());
 }
 
 
@@ -528,9 +540,13 @@ void ATACCharacterPlayer::SetupHUDWidget(UTACHUDWidget* InHUDWidget)
 	if(InHUDWidget)
 	{
 		InHUDWidget->UpdateHPBar(Stat->GetCurrentHP());
-		//InHUDWidget->UpdateOwnAmmo(CurrentWeapon->GetOwnAmmo());
-		//InHUDWidget->UpdateCurrentAmmo(CurrentWeapon->GetCurrentAmmo());
-
 		Stat->OnHPChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateHPBar);
+
+		InHUDWidget->UpdateCurrentAmmo(0);
+		InHUDWidget->UpdateOwnAmmo(0);
+		InHUDWidget->UpdateWeaponName(TEXT("--"));
+		OnCurrentAmmoChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateCurrentAmmo);
+		OnOwnAmmoChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateOwnAmmo);
+		OnWeaponNameChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateWeaponName);
 	}
 }

@@ -13,6 +13,8 @@ class TAC13_API ATACPlayerController : public APlayerController
 
 public:
 	ATACPlayerController();
+
+	FORCEINLINE TObjectPtr<class UTACHUDWidget> GetTACHUDWidget() { return TACHUDWidget; }
 	
 protected:
 	virtual void PostInitializeComponents() override;

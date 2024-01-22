@@ -17,6 +17,7 @@ enum class EFireMode:uint8
 	FULL
 };
 
+
 USTRUCT()
 struct FTACWeaponStat : public FTableRowBase
 {
@@ -56,6 +57,7 @@ class TAC13_API ATACWeapon : public AActor
 public:	
 	ATACWeapon();
 
+
 	FORCEINLINE FTACWeaponStat GetWeaponStat() const { return WeaponStat; }
 	void SetWeaponStat(const FTACWeaponStat& InWeaponStat) { WeaponStat = InWeaponStat; }
 
@@ -64,6 +66,9 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE uint8 GetOwnAmmo() const { return OwnAmmo; }
+
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE FName GetWeaponName() const { return WeaponName; }
 
 	virtual void SetOwner(AActor* NewOwner) override;
 
@@ -100,6 +105,9 @@ protected:
 	
 	UPROPERTY(VisibleInstanceOnly, Replicated)
 	uint8 OwnAmmo;
+
+	UPROPERTY(VisibleInstanceOnly, Replicated)
+	FName WeaponName;
 	
 	UFUNCTION(Server, Reliable)
 	void ServerRPCConsumingAmmo();
@@ -119,9 +127,6 @@ public:
 
 	UFUNCTION()
 	void ReloadingAmmo();
-
-	UPROPERTY(BlueprintReadOnly)
-	FName WeaponName;
 	
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE USkeletalMeshComponent* GetMesh() const { return Mesh; }

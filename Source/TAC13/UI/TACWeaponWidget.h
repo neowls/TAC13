@@ -21,11 +21,12 @@ protected:
 	virtual void NativeConstruct() override;
 
 public:
-	FORCEINLINE void SetOwnAmmo(uint8 NewOwnAmmo) { OwnAmmo = NewOwnAmmo; }
-	FORCEINLINE void SetCurrentAmmo(uint8 NewCurrentAmmo) { CurrentAmmo = NewCurrentAmmo; }
-	
+
 	void UpdateOwnAmmo(uint8 NewOwnAmmo);
 	void UpdateCurrentAmmo(uint8 NewCurrentAmmo);
+	void UpdateWeaponName(FName NewWeaponName);
+
+	FString GetAmmoText(uint8 NewAmmo);
 
 protected:
 	UPROPERTY()
@@ -33,6 +34,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<class UTextBlock> CurrentAmmoTextBlock;
+
+	UPROPERTY()
+	TObjectPtr<class UTextBlock> WeaponNameTextBlock;
 	
 	UPROPERTY()
 	uint8 CurrentAmmo;

@@ -8,6 +8,11 @@
 #include "Interface/TACCharacterWidgetInterface.h"
 #include "TACCharacterBase.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentAmmoChangedDelegate, uint8 /*CurrentAmmo*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnOwnAmmoChangedDelegate, uint8 /*OwnAmmo*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponNameChangedDelegate, FName /*WeaponName*/);
+
+
 UCLASS()
 class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeaponInterface, public ITACCharacterWidgetInterface
 {
@@ -16,6 +21,11 @@ class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeapo
 public:
 	// Sets default values for this character's properties
 	ATACCharacterBase(const FObjectInitializer& ObjectInitializer);
+
+	
+	FOnCurrentAmmoChangedDelegate OnCurrentAmmoChanged;
+	FOnOwnAmmoChangedDelegate OnOwnAmmoChanged;
+	FOnWeaponNameChangedDelegate OnWeaponNameChanged;
 
 	/** Returns CameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetCameraComponent() const { return Camera; }

@@ -19,12 +19,7 @@ void UTACHPWidget::NativeConstruct()
 
 	HPText = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtHP")));
 	ensure(HPText);
-
-	ITACCharacterWidgetInterface* CharacterWidget = Cast<ITACCharacterWidgetInterface>(OwningActor);
-	if(CharacterWidget)
-	{
-		CharacterWidget->SetupCharacterWidget(this);
-	}
+	
 }
 
 void UTACHPWidget::UpdateHP(uint8 NewCurrentHP)

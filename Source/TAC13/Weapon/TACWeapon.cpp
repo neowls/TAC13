@@ -1,5 +1,4 @@
 #include "Weapon/TACWeapon.h"
-
 #include "TAC13.h"
 #include "Character/TACCharacterPlayer.h"
 #include "GameData/TACGameSingleton.h"
@@ -42,6 +41,7 @@ void ATACWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ATACWeapon, WeaponStat);
 	DOREPLIFETIME(ATACWeapon, OwnAmmo);
 	DOREPLIFETIME(ATACWeapon, CurrentAmmo);
+	DOREPLIFETIME(ATACWeapon, WeaponName);
 }
 
 
@@ -60,6 +60,7 @@ void ATACWeapon::ReloadingAmmo()
 {
 	if(CurrentOwner->IsLocallyControlled())
 	ServerRPCReloadingAmmo();
+	
 }
 
 void ATACWeapon::ServerRPCReloadingAmmo_Implementation()
@@ -100,4 +101,5 @@ void ATACWeapon::OnRep_SetWeaponStatData()
 	Mesh->SetSkeletalMesh(WeaponStat.OwnMesh);
 	CurrentFireMode = WeaponStat.OwnFireMode[0];
 	CurrentFireModeIdx = 0;
+	
 }
