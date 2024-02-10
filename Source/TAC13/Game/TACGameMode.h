@@ -6,9 +6,7 @@
 #include "GameFramework/GameMode.h"
 #include "TACGameMode.generated.h"
 
-/**
- * 
- */
+
 UCLASS()
 class TAC13_API ATACGameMode : public AGameMode
 {
@@ -16,11 +14,11 @@ class TAC13_API ATACGameMode : public AGameMode
 
 public:
 	ATACGameMode();
-
+	
+	
 	virtual void StartPlay() override;
 	
 protected:
 	virtual void PostInitializeComponents() override;
-
-protected:
+	
 };

@@ -127,6 +127,9 @@ public:
 
 	UFUNCTION()
 	void ReloadingAmmo();
+
+	UFUNCTION()
+	void ResetWeaponData();
 	
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE USkeletalMeshComponent* GetMesh() const { return Mesh; }

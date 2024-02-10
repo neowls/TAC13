@@ -9,10 +9,14 @@
 #include "Interface/TACCharacterHUDInterface.h"
 #include "TACCharacterPlayer.generated.h"
 
+class ATACPlayerState;
 class UTACAnimInstance;
 /**
  * 
  */
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnScoreboardChangedDelegate, uint8 /*bIsScoreboardOn*/);
+
 UCLASS()
 class TAC13_API ATACCharacterPlayer : public ATACCharacterBase, public ITACCharacterHUDInterface
 {
@@ -35,6 +39,14 @@ protected:
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	virtual void SetDead() override;
+
+	virtual void RespawnCharacter() override;
+
+	FTimerHandle RespawnTimer;
+
+	float RespawnDelayTime = 3.0f;
+	
+	FOnScoreboardChangedDelegate OnScoreboardChanged;
 
 #pragma region FIRE
 
@@ -181,6 +193,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> ReloadAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> ScoreboardAction;
 
 
 
@@ -194,8 +209,9 @@ protected:
 	void Melee();
 	void ChangeFireMode();
 	void Leaning(const FInputActionValue& Value);
+	void ShowScoreboard(const FInputActionValue& Value);
 
-	void SetCharacterControl();
+	void SetCharacterControl(TObjectPtr<UTACControlData> InCharacterControlData);
 	virtual void SetCharacterControlData(const UTACControlData* CharacterControlData) override;
 #pragma endregion
 

@@ -9,7 +9,7 @@ UTACCharacterStatComponent::UTACCharacterStatComponent()
 	MaxHP = 100;
 	bWantsInitializeComponent = true;
 
-	SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 }
 
 void UTACCharacterStatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -32,7 +32,6 @@ float UTACCharacterStatComponent::ApplyDamage(uint8 InDamage)
 	{
 		OnHPZero.Broadcast();
 	}
-	TAC_SUBLOG(LogTACNetwork, Log, TEXT("%d"), CurrentHP);
 	return InDamage;
 }
 
@@ -45,7 +44,6 @@ void UTACCharacterStatComponent::SetHP(int8 NewHP)
 {
 	CurrentHP = FMath::Clamp<int8>(NewHP, 0, MaxHP);
 	OnHPChanged.Broadcast(CurrentHP);
-	TAC_SUBLOG(LogTACNetwork, Log, TEXT("%d"), CurrentHP);
 }
 
 

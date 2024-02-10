@@ -63,6 +63,12 @@ void ATACWeapon::ReloadingAmmo()
 	
 }
 
+void ATACWeapon::ResetWeaponData()
+{
+	OwnAmmo = WeaponStat.MaxAmmo * 6;
+	CurrentAmmo = WeaponStat.MaxAmmo;
+}
+
 void ATACWeapon::ServerRPCReloadingAmmo_Implementation()
 {
 	if(OwnAmmo <= 0 || WeaponStat.MaxAmmo == CurrentAmmo)

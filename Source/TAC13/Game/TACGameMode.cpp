@@ -2,7 +2,6 @@
 
 
 #include "Game/TACGameMode.h"
-
 #include "TACGameState.h"
 #include "TACPlayerState.h"
 
@@ -23,7 +22,7 @@ ATACGameMode::ATACGameMode()
 
 	GameStateClass = ATACGameState::StaticClass();
 	PlayerStateClass = ATACPlayerState::StaticClass();
-
+	
 }
 
 void ATACGameMode::StartPlay()

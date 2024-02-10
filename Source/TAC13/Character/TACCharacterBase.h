@@ -12,7 +12,6 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentAmmoChangedDelegate, uint8 /*Curre
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnOwnAmmoChangedDelegate, uint8 /*OwnAmmo*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponNameChangedDelegate, FName /*WeaponName*/);
 
-
 UCLASS()
 class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeaponInterface, public ITACCharacterWidgetInterface
 {
@@ -27,8 +26,11 @@ public:
 	FOnOwnAmmoChangedDelegate OnOwnAmmoChanged;
 	FOnWeaponNameChangedDelegate OnWeaponNameChanged;
 
+
+	
+
 	/** Returns CameraComponent subobject **/
-	FORCEINLINE class UCameraComponent* GetCameraComponent() const { return Camera; }
+	FORCEINLINE class UCameraComponent* GetCameraComponent() const { return FirstCamera; }
 
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE class UTACCharacterMovementComponent* GetTACCharacterMovement() const { return TACCharacterMovement; }
@@ -52,12 +54,20 @@ protected:
 
 	virtual void SetDead();
 
+	virtual void RespawnCharacter();
+
 	UPROPERTY(VisibleAnywhere, Category = CharacterControl, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UTACControlData> CurrentControlData;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-	TObjectPtr<UCameraComponent> Camera;
+	UPROPERTY(VisibleAnywhere, Category = CharacterControl, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UTACControlData> PlayControlData;
 
+	UPROPERTY(VisibleAnywhere, Category = CharacterControl, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UTACControlData> SpectateControlData;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+	TObjectPtr<UCameraComponent> FirstCamera;
+	
 	UPROPERTY(BlueprintReadOnly, Category = Camera)
 	float CameraStandHeight;
 
@@ -66,6 +76,10 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly, Category = Camera)
 	float CameraProneHeight;
+
+	FTransform InitialMeshTransform;
+
+	AController* RecentAttacker;
 
 public:
 	UPROPERTY(BlueprintReadOnly, replicatedUsing=OnRep_IsADS, Category = Aiming)
@@ -153,16 +167,12 @@ public:
 
 #pragma endregion
 
-
-
 #pragma region MESH
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> ArmMesh;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<USkeletalMeshComponent> RoleMesh;
+	
 
 	UPROPERTY(BlueprintReadOnly, Category = Anim)
 	TObjectPtr<class UTACArmAnimInstance> ArmAnimInstance;

@@ -28,13 +28,14 @@ public:
 	
 	FORCEINLINE uint8 GetMaxHP() { return MaxHP; }
 	FORCEINLINE uint8 GetCurrentHP() { return CurrentHP; }
+	
 	float ApplyDamage(uint8 InDamage);
 	
-	
+	void SetHP(int8 NewHP);
 protected:
 	virtual void ReadyForReplication() override;
 	
-	void SetHP(int8 NewHP);
+
 	
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentHP, Transient, VisibleInstanceOnly, Category = Stat)
 	uint8 CurrentHP;

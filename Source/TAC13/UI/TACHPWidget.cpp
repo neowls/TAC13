@@ -4,7 +4,6 @@
 #include "UI/TACHPWidget.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
-#include "Interface/TACCharacterWidgetInterface.h"
 
 UTACHPWidget::UTACHPWidget(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

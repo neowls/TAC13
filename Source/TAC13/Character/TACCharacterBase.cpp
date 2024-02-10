@@ -7,7 +7,9 @@
 #include "TACCharacterStatComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Game/TACGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerState.h"
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
@@ -17,10 +19,16 @@
 ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UTACCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
-	static ConstructorHelpers::FObjectFinder<UTACControlData> ControlDataRef(TEXT("/Script/TAC13.TACControlData'/Game/_TAC/Input/DA_Character.DA_Character'"));
-	if (nullptr != ControlDataRef.Object)
+	static ConstructorHelpers::FObjectFinder<UTACControlData> PlayControlDataRef(TEXT("/Script/TAC13.TACControlData'/Game/_TAC/Input/DA_Character.DA_Character'"));
+	if (nullptr != PlayControlDataRef.Object)
 	{
-		CurrentControlData = ControlDataRef.Object;
+		PlayControlData = PlayControlDataRef.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UTACControlData> SpectateControlDataRef(TEXT("/Script/TAC13.TACControlData'/Game/_TAC/Input/DA_Spectate.DA_Spectate'"));
+	if (nullptr != SpectateControlDataRef.Object)
+	{
+		SpectateControlData = SpectateControlDataRef.Object;
 	}
 
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> FireMontageRef(TEXT("/Script/Engine.AnimMontage'/Game/_Asset/Characters/Mannequin/Animations/Actions/AM_MM_Rifle_Fire.AM_MM_Rifle_Fire'"));
@@ -52,13 +60,13 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.0f;
 
 	//	Camera Section
-	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(GetCapsuleComponent());
+	FirstCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+	FirstCamera->SetupAttachment(GetCapsuleComponent());
 	CameraStandHeight = 80.f;
 	CameraCrouchedHeight = 54.f;
 	CameraProneHeight = 34.f;
-	Camera->SetRelativeLocation(FVector(0.f,0.f,CameraStandHeight));
-	Camera->bUsePawnControlRotation = true;
+	FirstCamera->SetRelativeLocation(FVector(0.f,0.f,CameraStandHeight));
+	FirstCamera->bUsePawnControlRotation = true;
 
 	//	Stat Component
 	Stat = CreateDefaultSubobject<UTACCharacterStatComponent>(TEXT("Stat"));
@@ -68,12 +76,14 @@ void ATACCharacterBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	Stat->OnHPZero.AddUObject(this, &ATACCharacterBase::SetDead);
+	InitialMeshTransform = GetMesh()->GetRelativeTransform();
 }
 
 float ATACCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	Stat->ApplyDamage(DamageAmount);
+	RecentAttacker = EventInstigator;
 	return DamageAmount;
 }
 
@@ -81,7 +91,16 @@ void ATACCharacterBase::SetDead()
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("Character Dead"));
 	PlayDeadAnimation();
-	SetActorEnableCollision(false);
+	ATACGameState* APC = Cast<ATACGameState>(GetWorld()->GetGameState());
+	if(HasAuthority())
+	{
+		APC->AddKillLogEntry(RecentAttacker->PlayerState->GetPlayerName(), Controller->PlayerState->GetPlayerName());		
+	}
+}
+
+void ATACCharacterBase::RespawnCharacter()
+{
+	
 }
 
 
@@ -144,8 +163,8 @@ void ATACCharacterBase::PlayDeadAnimation()
 
 void ATACCharacterBase::FireHitCheck()
 {
-	const FVector Start = Camera->GetComponentLocation();
-	const FVector End = Start + Camera->GetForwardVector() * 10000.0f;
+	const FVector Start = FirstCamera->GetComponentLocation();
+	const FVector End = Start + FirstCamera->GetForwardVector() * 10000.0f;
 	FHitResult HitResult;
 	FWorldContext WorldContext;
 
@@ -165,13 +184,13 @@ void ATACCharacterBase::FireHitCheck()
 void ATACCharacterBase::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
-	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraCrouchedHeight));
+	FirstCamera->SetRelativeLocation(FVector(10.f,0.f, CameraCrouchedHeight));
 }
 
 void ATACCharacterBase::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
-	Camera->SetRelativeLocation(FVector(10.f,0.f, CameraStandHeight));
+	FirstCamera->SetRelativeLocation(FVector(10.f,0.f, CameraStandHeight));
 	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 }
 #pragma endregion

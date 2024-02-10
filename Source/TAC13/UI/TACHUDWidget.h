@@ -22,6 +22,9 @@ public:
 	void UpdateOwnAmmo(uint8 NewOwnAmmo);
 	void UpdateWeaponName(FName NewWeaponName);
 	void UpdateHPBar(uint8 NewCurrentHP);
+	void UpdateKillLog(FString InAttacker, FString InWeaponName, FString InVictim);
+	void ScoreBoardOnOff(uint8 bIsScoreBoardOn);
+	
 	
 protected:
 	virtual void NativeConstruct() override;
@@ -32,4 +35,15 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<class UTACWeaponWidget> WeaponStat;
+	
+	UPROPERTY()
+	TObjectPtr<class UVerticalBox> KillLogBox;
+
+	UPROPERTY()
+	TObjectPtr<class UTACScoreBoardWidget> ScoreBoard;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<class UUserWidget> KillLogClass;
+	
+	float RemoveDelayTime = 3.0f;
 };

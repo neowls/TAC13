@@ -9,13 +9,13 @@
 #include "TACCharacterStatComponent.h"
 #include "Animation/TACAnimInstance.h"
 #include "Animation/TACArmAnimInstance.h"
+#include "Animation/TACBodyAnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/DamageEvents.h"
 #include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "Player/TACPlayerController.h"
 #include "UI/TACHUDWidget.h"
 #include "Weapon/TACWeapon.h"
 
@@ -41,6 +41,7 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 		CONSTRUCT_IA InputActionChangeWeaponRef;
 		CONSTRUCT_IA InputActionLeaningRef;
 		CONSTRUCT_IA InputActionReloadRef;
+		CONSTRUCT_IA InputActionScoreboardRef;
 		FConstructorStatics()
 			: InputActionFireRef(TEXT("/Script/EnhancedInput.InputAction'/Game/_TAC/Input/Actions/IA_Fire.IA_Fire'"))
 			, InputActionAimRef(TEXT("/Script/EnhancedInput.InputAction'/Game/_TAC/Input/Actions/IA_Aim.IA_Aim'"))
@@ -56,6 +57,7 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 			, InputActionChangeWeaponRef(TEXT("/Script/EnhancedInput.InputAction'/Game/_TAC/Input/Actions/IA_ChangeWeapon.IA_ChangeWeapon'"))
 			, InputActionLeaningRef(TEXT("/Script/EnhancedInput.InputAction'/Game/_TAC/Input/Actions/IA_Leaning.IA_Leaning'"))
 			, InputActionReloadRef(TEXT("/Script/EnhancedInput.InputAction'/Game/_TAC/Input/Actions/IA_Reload.IA_Reload'"))
+			, InputActionScoreboardRef(TEXT("/Script/EnhancedInput.InputAction'/Game/_TAC/Input/Actions/IA_Scoreboard.IA_Scoreboard'"))
 		{}
 	};
 	static FConstructorStatics ConstructorStatics;
@@ -73,6 +75,7 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	if(nullptr != ConstructorStatics.InputActionChangeWeaponRef.Object) ChangeWeaponAction = ConstructorStatics.InputActionChangeWeaponRef.Object;
 	if(nullptr != ConstructorStatics.InputActionLeaningRef.Object) LeaningAction = ConstructorStatics.InputActionLeaningRef.Object;
 	if(nullptr != ConstructorStatics.InputActionReloadRef.Object) ReloadAction = ConstructorStatics.InputActionReloadRef.Object;
+	if(nullptr != ConstructorStatics.InputActionScoreboardRef.Object) ScoreboardAction = ConstructorStatics.InputActionScoreboardRef.Object;
 
 	
 	//	Capsule Section
@@ -100,8 +103,7 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	GetMesh()->SetOwnerNoSee(true);
 	GetMesh()->CastShadow = true;
 	GetMesh()->bCastDynamicShadow = true;
-
-	RoleMesh = GetMesh();
+	
 	FireMontage = FireCosmeticMontage;
 
 	
@@ -110,6 +112,7 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 	bCanFire = true;
+	
 }
 
 void ATACCharacterPlayer::BeginPlay()
@@ -122,11 +125,11 @@ void ATACCharacterPlayer::BeginPlay()
 	
 	if(IsLocallyControlled())
 	{
-		RoleMesh = ArmMesh;
 		FireMontage = FireArmMontage;
 	}
 	ArmAnimInstance = Cast<UTACArmAnimInstance>(ArmMesh->GetAnimInstance());
-	SetCharacterControl();
+	BodyAnimInstance = Cast<UTACBodyAnimInstance>(GetMesh()->GetAnimInstance());
+	SetCharacterControl(PlayControlData);
 	if(HasAuthority())
 	{
 		SpawnWeapon("VAL");
@@ -161,6 +164,7 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::ReloadingWeapon);
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+	EnhancedInputComponent->BindAction(ScoreboardAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::ShowScoreboard);
 }
 
 void ATACCharacterPlayer::PostInitializeComponents()
@@ -181,19 +185,48 @@ void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 float ATACCharacterPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	ATACCharacterPlayer* AttackerPlayer = Cast<ATACCharacterPlayer>(DamageCauser);
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	TAC_LOG(LogTACNetwork, Log, TEXT("Player %f Damage Taken from : %s"), DamageAmount, *Cast<ATACCharacterPlayer>(DamageCauser)->CurrentWeapon->GetWeaponName().ToString());
+	TAC_LOG(LogTACNetwork, Log, TEXT("Player %f Damage Taken from : %s"), DamageAmount, *AttackerPlayer->CurrentWeapon->GetWeaponName().ToString());
 	return ActualDamage;
 }
 
 void ATACCharacterPlayer::SetDead()
 {
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	Super::SetDead();
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	SetCharacterControl(SpectateControlData);
+	GetCapsuleComponent()->SetCollisionProfileName(TEXT("DeadPawn"));
+	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+	GetMesh()->SetSimulatePhysics(true);
+	GetMesh()->SetOwnerNoSee(false);
+	ArmMesh->SetOwnerNoSee(true);
+	CurrentWeapon->SetActorHiddenInGame(true);
+	GetWorldTimerManager().SetTimer(RespawnTimer, this, &ATACCharacterPlayer::RespawnCharacter, RespawnDelayTime, false);
+	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
+}
+
+void ATACCharacterPlayer::RespawnCharacter()
+{
+	Super::RespawnCharacter();
+	//SetActorLocation({})
+	GetMesh()->SetSimulatePhysics(false);
+	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+	GetMesh()->AttachToComponent(GetCapsuleComponent(),FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true));
+	GetMesh()->SetRelativeLocationAndRotation(FVector(0.0f, 0.0f, -90.0f), FRotator(0.0f, -90.0f, 0.0f));
+	if(HasAuthority())
 	{
-		DisableInput(PlayerController);
-		PlayerController->SetShowMouseCursor(true);
+		Stat->SetHP(100);
+		for(auto iter : OwnWeapons)
+		{
+			iter->ResetWeaponData();
+		}
 	}
+	GetMesh()->SetOwnerNoSee(true);
+	ArmMesh->SetOwnerNoSee(false);
+	CurrentWeapon->SetActorHiddenInGame(false);
+	GetCapsuleComponent()->SetCollisionProfileName(TEXT("Pawn"));
+	SetCharacterControl(PlayControlData);
 }
 
 void ATACCharacterPlayer::ServerRPCNotifyHit_Implementation(const FHitResult& HitResult, float HitCheckTime)
@@ -214,12 +247,13 @@ bool ATACCharacterPlayer::ServerRPCNotifyHit_Validate(const FHitResult& HitResul
 	return (HitCheckTime - LastFireStartTime) < AcceptMinCheckTime;
 }
 
-void ATACCharacterPlayer::SetCharacterControl()
+void ATACCharacterPlayer::SetCharacterControl(TObjectPtr<UTACControlData> InCharacterControlData)
 {
 	if (!IsLocallyControlled())
 	{
 		return;
 	}
+	CurrentControlData = InCharacterControlData;
 	
 	SetCharacterControlData(CurrentControlData);
 
@@ -282,8 +316,8 @@ void ATACCharacterPlayer::FireHitCheck()
 	{
 		FHitResult OutHitResult;
 		const FVector SpreadVector = bIsADS ? FVector::Zero() : FMath::VRand() * 0.05f;
-		const FVector Start = Camera->GetComponentLocation();
-		const FVector End = Start + (Camera->GetForwardVector() + SpreadVector) * 10000.0f;
+		const FVector Start = FirstCamera->GetComponentLocation();
+		const FVector End = Start + (FirstCamera->GetForwardVector() + SpreadVector) * 10000.0f;
 		const TArray<AActor*> ActorsToIgnore;
 		const bool bHit = UKismetSystemLibrary::LineTraceSingle(this, Start, End, UEngineTypes::ConvertToTraceType(ECC_Visibility),
 			true, ActorsToIgnore, EDrawDebugTrace::ForDuration, OutHitResult, true, FLinearColor::Yellow, FLinearColor::Green, 2.0f);
@@ -328,10 +362,19 @@ void ATACCharacterPlayer::FireHitConfirm(const FHitResult& HitResult)
 
 void ATACCharacterPlayer::PlayFireAnimation()
 {
-	RoleMesh->GetAnimInstance()->StopAllMontages(0.0f);
-	RoleMesh->GetAnimInstance()->Montage_Play(FireMontage);
+	if(IsLocallyControlled())
+	{
+		ArmAnimInstance->StopAllMontages(0.0f);
+		ArmAnimInstance->Montage_Play(FireArmMontage);
+	}
+	else
+	{
+		BodyAnimInstance->StopAllMontages(0.0f);
+		BodyAnimInstance->Montage_Play(FireMontage);
+	}
 	CurrentWeapon->ConsumingAmmo();
 	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
+	
 }
 
 void ATACCharacterPlayer::ServerRPCFire_Implementation(float FireStartTime)
@@ -356,7 +399,6 @@ bool ATACCharacterPlayer::ServerRPCFire_Validate(float FireStartTime)
 
 void ATACCharacterPlayer::MulticastRPCFire_Implementation()
 {
-	
 	if(!IsLocallyControlled())
 	{
 		PlayFireAnimation();
@@ -380,7 +422,12 @@ void ATACCharacterPlayer::SpawnWeapon(const FName WeaponName)
 
 void ATACCharacterPlayer::AttachWeapon(ATACWeapon* TargetWeapon)
 {
-	TargetWeapon->AttachToComponent(RoleMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("Grip"));
+	if(IsLocallyControlled())
+	TargetWeapon->AttachToComponent(ArmMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("Grip"));
+	else
+	{
+		TargetWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("Grip"));
+	}
 }
 
 void ATACCharacterPlayer::DropWeapon()
@@ -396,8 +443,9 @@ void ATACCharacterPlayer::DropWeapon()
 void ATACCharacterPlayer::ReloadingWeapon()
 {
 	CurrentWeapon->ReloadingAmmo();
-	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
+	
 	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
+	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
 }
 
 
@@ -415,9 +463,6 @@ void ATACCharacterPlayer::OnRep_OwnWeapons()
 void ATACCharacterPlayer::OnRep_CurrentWeapon()
 {
 	CurrentWeapon->SetActorHiddenInGame(false);
-	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
-	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
-	OnWeaponNameChanged.Broadcast(CurrentWeapon->GetWeaponName());
 }
 
 
@@ -440,6 +485,10 @@ void ATACCharacterPlayer::EquipWeapon(const uint8 Index)
 	FireTime = 60 / CurrentWeapon->GetWeaponStat().FireRate;
 	OnRep_CurrentWeapon();
 	ArmAnimInstance->SetNewSight();
+	
+	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
+	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
+	OnWeaponNameChanged.Broadcast(CurrentWeapon->GetWeaponName());
 }
 
 
@@ -460,8 +509,7 @@ void ATACCharacterPlayer::ServerRPCSetCurrentWeapon_Implementation(const uint8 I
 
 void ATACCharacterPlayer::PlayChangeWeaponAnimation()
 {
-	RoleMesh->GetAnimInstance()->StopAllMontages(0.0f);
-	RoleMesh->GetAnimInstance()->Montage_Play(ChangeWeaponMontage);
+	
 }
 
 
@@ -524,6 +572,13 @@ void ATACCharacterPlayer::Leaning(const FInputActionValue& Value)
 	
 }
 
+void ATACCharacterPlayer::ShowScoreboard(const FInputActionValue& Value)
+{
+	const uint8 bScoreboardInput = Value.Get<bool>();
+	TAC_LOG(LogTACNetwork, Log, TEXT("Scoreboard Input : %d"), bScoreboardInput);
+	OnScoreboardChanged.Broadcast(bScoreboardInput);
+}
+
 void ATACCharacterPlayer::Melee()
 {
 	
@@ -541,12 +596,12 @@ void ATACCharacterPlayer::SetupHUDWidget(UTACHUDWidget* InHUDWidget)
 	{
 		InHUDWidget->UpdateHPBar(Stat->GetCurrentHP());
 		Stat->OnHPChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateHPBar);
-
 		InHUDWidget->UpdateCurrentAmmo(0);
 		InHUDWidget->UpdateOwnAmmo(0);
 		InHUDWidget->UpdateWeaponName(TEXT("--"));
 		OnCurrentAmmoChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateCurrentAmmo);
 		OnOwnAmmoChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateOwnAmmo);
 		OnWeaponNameChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateWeaponName);
+		OnScoreboardChanged.AddUObject(InHUDWidget, &UTACHUDWidget::ScoreBoardOnOff);
 	}
 }

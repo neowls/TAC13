@@ -13,6 +13,14 @@ ATACPlayerController::ATACPlayerController()
 	}
 }
 
+void ATACPlayerController::ClientUpdateKillLog_Implementation(const FString& KillerName, const FString& VictimName)
+{
+	if(TACHUDWidget)
+	{
+		TACHUDWidget->UpdateKillLog(KillerName, "TEST", VictimName);
+	}
+}
+
 void ATACPlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
