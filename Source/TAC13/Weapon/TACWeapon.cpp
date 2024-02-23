@@ -96,7 +96,7 @@ void ATACWeapon::LoadWeaponStatData(const FName InName)
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("Begin"));
 	WeaponStat = UTACGameSingleton::Get().GetWeaponStatData(InName);
-	WeaponName = InName;
+	WeaponName = InName.ToString();
 	OwnAmmo = WeaponStat.MaxAmmo * 6;
 	CurrentAmmo = WeaponStat.MaxAmmo;
 	OnRep_SetWeaponStatData();

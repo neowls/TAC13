@@ -68,7 +68,7 @@ public:
 	FORCEINLINE uint8 GetOwnAmmo() const { return OwnAmmo; }
 
 	UFUNCTION(BlueprintPure)
-	FORCEINLINE FName GetWeaponName() const { return WeaponName; }
+	FORCEINLINE FString GetWeaponName() const { return WeaponName; }
 
 	virtual void SetOwner(AActor* NewOwner) override;
 
@@ -107,7 +107,7 @@ protected:
 	uint8 OwnAmmo;
 
 	UPROPERTY(VisibleInstanceOnly, Replicated)
-	FName WeaponName;
+	FString WeaponName;
 	
 	UFUNCTION(Server, Reliable)
 	void ServerRPCConsumingAmmo();

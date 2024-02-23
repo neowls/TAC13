@@ -7,14 +7,15 @@
 
 ATACPlayerState::ATACPlayerState()
 {
-	
+	PlayerScore.PlayerName = "Player";
+	PlayerScore.KillScore = 0;
+	PlayerScore.DeathScore = 0;
 }
 
 void ATACPlayerState::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	SetPlayerName("Player");
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), *GetPlayerName());
 }
 
 void ATACPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -23,3 +24,29 @@ void ATACPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ATACPlayerState, PlayerScore);
 	
 }
+
+void ATACPlayerState::OnRep_PlayerScore()
+{
+	TAC_LOG(LogTACNetwork, Log, TEXT("Kill Score : %d"), PlayerScore.KillScore);
+	TAC_LOG(LogTACNetwork, Log, TEXT("Death Score : %d"), PlayerScore.DeathScore);
+}
+
+void ATACPlayerState::AddKillScore()
+{
+	if(GetLocalRole() == ROLE_Authority)
+	{
+		PlayerScore.KillScore++;
+		OnRep_PlayerScore();
+	}
+}
+
+void ATACPlayerState::AddDeathScore()
+{
+	if(GetLocalRole() == ROLE_Authority)
+	{
+		PlayerScore.DeathScore++;
+		OnRep_PlayerScore();
+	}
+}
+
+

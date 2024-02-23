@@ -23,3 +23,9 @@ UTACGameSingleton& UTACGameSingleton::Get()
 	UE_LOG(LogTACGameSingleton, Error, TEXT("Invalid Game Singleton"));
 	return *NewObject<UTACGameSingleton>();
 }
+
+void UTACGameSingleton::InitializeGameSystem(ATACGameMode* InGameMode, ATACGameState* InGameState)
+{
+	TACGameMode = InGameMode;
+	TACGameState = InGameState;
+}

@@ -8,11 +8,14 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Game/TACGameState.h"
+#include "Game/TACPlayerState.h"
+#include "GameData/TACGameSingleton.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "Weapon/TACWeapon.h"
 
 
 // Sets default values
@@ -83,7 +86,8 @@ float ATACCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	Stat->ApplyDamage(DamageAmount);
-	RecentAttacker = EventInstigator;
+	RecentAttacker = Cast<ATACPlayerState>(EventInstigator->PlayerState);
+	RecentAttackedWeaponName = Cast<ATACWeapon>(DamageCauser)->GetWeaponName();
 	return DamageAmount;
 }
 
@@ -91,10 +95,10 @@ void ATACCharacterBase::SetDead()
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("Character Dead"));
 	PlayDeadAnimation();
-	ATACGameState* APC = Cast<ATACGameState>(GetWorld()->GetGameState());
+	ATACGameState* AGS = GetWorld()->GetGameState<ATACGameState>();
 	if(HasAuthority())
 	{
-		APC->AddKillLogEntry(RecentAttacker->PlayerState->GetPlayerName(), Controller->PlayerState->GetPlayerName());		
+		AGS->AddKillLogEntry(RecentAttacker->GetPlayerName(), RecentAttackedWeaponName, GetPlayerState()->GetPlayerName());
 	}
 }
 

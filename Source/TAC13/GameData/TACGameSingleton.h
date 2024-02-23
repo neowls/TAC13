@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Game/TACGameMode.h"
+#include "Game/TACGameState.h"
 #include "UObject/NoExportTypes.h"
 #include "Weapon/TACWeapon.h"
 #include "TACGameSingleton.generated.h"
@@ -22,7 +24,19 @@ public:
 public:
 	FORCEINLINE FTACWeaponStat GetWeaponStatData(const FName RowName) const { return *WeaponStatTable->FindRow<FTACWeaponStat>(RowName, "WeaponStatDataTable"); }
 
+	void InitializeGameSystem(ATACGameMode* InGameMode, ATACGameState* InGameState);
+
+	ATACGameMode* GetTACGameMode() const { return TACGameMode; }
+	ATACGameState* GetTACGameState() const { return TACGameState; }
+
 private:
 	UPROPERTY(VisibleDefaultsOnly)
 	TSoftObjectPtr<class UDataTable> WeaponStatTable;
+
+	UPROPERTY(Transient)
+	ATACGameMode* TACGameMode;
+
+	UPROPERTY(Transient)
+	ATACGameState* TACGameState;
+	
 };

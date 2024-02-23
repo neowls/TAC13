@@ -10,7 +10,7 @@
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentAmmoChangedDelegate, uint8 /*CurrentAmmo*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnOwnAmmoChangedDelegate, uint8 /*OwnAmmo*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponNameChangedDelegate, FName /*WeaponName*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponNameChangedDelegate, FString /*WeaponName*/);
 
 UCLASS()
 class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeaponInterface, public ITACCharacterWidgetInterface
@@ -79,7 +79,11 @@ protected:
 
 	FTransform InitialMeshTransform;
 
-	AController* RecentAttacker;
+	UPROPERTY()
+	class ATACPlayerState* RecentAttacker;
+
+	UPROPERTY()
+	FString RecentAttackedWeaponName;
 
 public:
 	UPROPERTY(BlueprintReadOnly, replicatedUsing=OnRep_IsADS, Category = Aiming)

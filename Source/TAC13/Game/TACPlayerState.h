@@ -20,9 +20,21 @@ public:
 
 	virtual void PostInitializeComponents() override;
 
+	FORCEINLINE FPlayerScore* GetPlayerScore() { return &PlayerScore; }
+
+	UFUNCTION()
+	void AddKillScore();
+
+	UFUNCTION()
+	void AddDeathScore();
+
+	UFUNCTION()
+	void OnRep_PlayerScore();
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	UPROPERTY(Replicated)
-	FTACPlayerScore PlayerScore;
+	UPROPERTY(ReplicatedUsing = OnRep_PlayerScore)
+	FPlayerScore PlayerScore;
 };
+

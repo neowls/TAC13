@@ -1,21 +1,23 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "TACStruct.generated.h"
 
 USTRUCT(BlueprintType)
-struct FTACPlayerScore
+struct FPlayerScore
 {
 	GENERATED_BODY()
 
-public:
-	//FTACKillLog() : Damage(0.0f), FireRate(0.0f), Recoil(0.0f), Ergonomics(0.0f), MaxAmmo(0) {};
-	FTACPlayerScore();
+	FPlayerScore() : PlayerName("Player"), KillScore(0), DeathScore(0) {};
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString PlayerName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	uint8 KillScore;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	int8 KillScore;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	int8 DeathScore;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	uint8 DeathScore;
 };
 
 USTRUCT(BlueprintType)
@@ -23,12 +25,12 @@ struct FKillLogEntry
 {
 	GENERATED_BODY()
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString KillerName;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString VictimName;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString WeaponName;
 };

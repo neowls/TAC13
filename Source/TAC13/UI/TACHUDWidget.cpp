@@ -30,7 +30,7 @@ void UTACHUDWidget::UpdateOwnAmmo(uint8 NewOwnAmmo)
 	WeaponStat->UpdateOwnAmmo(NewOwnAmmo);
 }
 
-void UTACHUDWidget::UpdateWeaponName(FName NewWeaponName)
+void UTACHUDWidget::UpdateWeaponName(FString NewWeaponName)
 {
 	WeaponStat->UpdateWeaponName(NewWeaponName);
 }
@@ -47,8 +47,21 @@ void UTACHUDWidget::UpdateKillLog(FString InAttacker, FString InWeaponName, FStr
 	InKillLog->UpdateKillLogText(InAttacker, InWeaponName, InVictim);
 }
 
+void UTACHUDWidget::UpdateScoreBoard()
+{
+	if(ScoreBoard)
+	ScoreBoard->UpdateScoreBoard();
+}
+
+void UTACHUDWidget::SetScoreBoardPlayer(const TArray<ATACPlayerState*>& InArray)
+{
+	if(ScoreBoard)
+	ScoreBoard->SetPlayerList(InArray);
+}
+
 void UTACHUDWidget::ScoreBoardOnOff(uint8 bIsScoreBoardOn)
 {
+	if(!ScoreBoard) return;
 	if(bIsScoreBoardOn) ScoreBoard->SetVisibility(ESlateVisibility::Visible);
 	else ScoreBoard->SetVisibility(ESlateVisibility::Hidden);
 }

@@ -4,6 +4,7 @@
 #include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "OnlineSubsystem.h"
 #include "TAC13.h"
 #include "TACCharacterMovementComponent.h"
 #include "TACCharacterStatComponent.h"
@@ -12,6 +13,8 @@
 #include "Animation/TACBodyAnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/DamageEvents.h"
+#include "Game/TACGameMode.h"
+#include "Game/TACPlayerState.h"
 #include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Input/TACControlData.h"
@@ -137,6 +140,7 @@ void ATACCharacterPlayer::BeginPlay()
 		SpawnWeapon("AR4");
 		EquipWeapon(0);
 	}
+	//GetOnlineSubsystem();
 }
 
 void ATACCharacterPlayer::PossessedBy(AController* NewController)
@@ -181,13 +185,32 @@ void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION(ATACCharacterPlayer, OwnWeapons, COND_None);
 }
 
+void ATACCharacterPlayer::GetOnlineSubsystem()
+{
+	// Receive OnlineSubsystem
+	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	if(OnlineSubsystem)
+	{
+		// Receive OnlineSubsystem Interface
+		OnlineSessionInterface = OnlineSubsystem->GetSessionInterface();
+
+		if(GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(
+			-1,
+			15.f,
+			FColor::Orange,
+			FString::Printf(TEXT("Subsystem Name : %s"), *OnlineSubsystem->GetSubsystemName().ToString()));
+		}
+	}
+
+}
+
 #pragma region HIT
 
 float ATACCharacterPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	ATACCharacterPlayer* AttackerPlayer = Cast<ATACCharacterPlayer>(DamageCauser);
 	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	TAC_LOG(LogTACNetwork, Log, TEXT("Player %f Damage Taken from : %s"), DamageAmount, *AttackerPlayer->CurrentWeapon->GetWeaponName().ToString());
 	return ActualDamage;
 }
 
@@ -195,6 +218,10 @@ void ATACCharacterPlayer::SetDead()
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	Super::SetDead();
+	
+	if(HasAuthority())
+	Cast<ATACGameMode>(GetWorld()->GetAuthGameMode())->AddPlayerScore(RecentAttacker, Cast<ATACPlayerState>(Controller->PlayerState));
+	
 	SetCharacterControl(SpectateControlData);
 	GetCapsuleComponent()->SetCollisionProfileName(TEXT("DeadPawn"));
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
@@ -209,7 +236,7 @@ void ATACCharacterPlayer::SetDead()
 void ATACCharacterPlayer::RespawnCharacter()
 {
 	Super::RespawnCharacter();
-	//SetActorLocation({})
+	//SetActorLocation({}) 리스폰 위치 지정
 	GetMesh()->SetSimulatePhysics(false);
 	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
 	GetMesh()->AttachToComponent(GetCapsuleComponent(),FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true));
@@ -228,6 +255,7 @@ void ATACCharacterPlayer::RespawnCharacter()
 	GetCapsuleComponent()->SetCollisionProfileName(TEXT("Pawn"));
 	SetCharacterControl(PlayControlData);
 }
+
 
 void ATACCharacterPlayer::ServerRPCNotifyHit_Implementation(const FHitResult& HitResult, float HitCheckTime)
 {
@@ -356,7 +384,7 @@ void ATACCharacterPlayer::FireHitConfirm(const FHitResult& HitResult)
 		else PartDamageMultiplier = 1.0f;
 		const float FireDamage = CurrentWeapon->GetWeaponStat().Damage * PartDamageMultiplier;
 		FDamageEvent DamageEvent;
-		HitResult.GetActor()->TakeDamage(FireDamage, DamageEvent, GetController(), this);
+		HitResult.GetActor()->TakeDamage(FireDamage, DamageEvent, GetController(), CurrentWeapon);
 	}
 }
 
@@ -511,9 +539,16 @@ void ATACCharacterPlayer::PlayChangeWeaponAnimation()
 {
 	
 }
+void ATACCharacterPlayer::ChangeFireMode()
+{
+	CurrentWeapon->ChangeFireMode();
+	
+}
 
+#pragma endregion
 
-#pragma endregion 
+#pragma region INPUT
+
 
 void ATACCharacterPlayer::Move(const FInputActionValue& Value)
 {
@@ -572,23 +607,14 @@ void ATACCharacterPlayer::Leaning(const FInputActionValue& Value)
 	
 }
 
-void ATACCharacterPlayer::ShowScoreboard(const FInputActionValue& Value)
-{
-	const uint8 bScoreboardInput = Value.Get<bool>();
-	TAC_LOG(LogTACNetwork, Log, TEXT("Scoreboard Input : %d"), bScoreboardInput);
-	OnScoreboardChanged.Broadcast(bScoreboardInput);
-}
-
 void ATACCharacterPlayer::Melee()
 {
 	
 }
 
-void ATACCharacterPlayer::ChangeFireMode()
-{
-	CurrentWeapon->ChangeFireMode();
-	
-}
+#pragma endregion 
+
+#pragma region WIDGET
 
 void ATACCharacterPlayer::SetupHUDWidget(UTACHUDWidget* InHUDWidget)
 {
@@ -605,3 +631,12 @@ void ATACCharacterPlayer::SetupHUDWidget(UTACHUDWidget* InHUDWidget)
 		OnScoreboardChanged.AddUObject(InHUDWidget, &UTACHUDWidget::ScoreBoardOnOff);
 	}
 }
+
+void ATACCharacterPlayer::ShowScoreboard(const FInputActionValue& Value)
+{
+	const uint8 bScoreboardInput = Value.Get<bool>();
+	TAC_LOG(LogTACNetwork, Log, TEXT("Scoreboard Input : %d"), bScoreboardInput);
+	OnScoreboardChanged.Broadcast(bScoreboardInput);
+}
+
+#pragma endregion

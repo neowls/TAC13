@@ -40,11 +40,11 @@ void UTACWeaponWidget::UpdateCurrentAmmo(uint8 NewCurrentAmmo)
 	}
 }
 
-void UTACWeaponWidget::UpdateWeaponName(FName NewWeaponName)
+void UTACWeaponWidget::UpdateWeaponName(FString NewWeaponName)
 {
 	if(WeaponNameTextBlock)
 	{
-		WeaponNameTextBlock->SetText(FText::FromName(NewWeaponName));
+		WeaponNameTextBlock->SetText(FText::FromString(NewWeaponName));
 	}
 }
 

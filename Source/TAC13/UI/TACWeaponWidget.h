@@ -24,7 +24,7 @@ public:
 
 	void UpdateOwnAmmo(uint8 NewOwnAmmo);
 	void UpdateCurrentAmmo(uint8 NewCurrentAmmo);
-	void UpdateWeaponName(FName NewWeaponName);
+	void UpdateWeaponName(FString NewWeaponName);
 
 	FString GetAmmoText(uint8 NewAmmo);
 

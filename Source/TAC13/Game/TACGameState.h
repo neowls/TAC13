@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TACGameMode.h"
 #include "GameFramework/GameState.h"
 #include "GameData/TACStruct.h"
 #include "TACGameState.generated.h"
@@ -18,19 +19,29 @@ public:
 	UPROPERTY(ReplicatedUsing=OnRep_KillLogUpdated)
 	TArray<FKillLogEntry> KillLogList;
 
-	UFUNCTION()
-	void SetPlayerList();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_PlayerList)
+	TArray<class ATACPlayerState*> TACPlayerList;
 
+	UPROPERTY(Transient, BlueprintReadOnly, Category=GameState)
+	TObjectPtr<ATACGameMode> AuthTACGameMode;
+	
 	UFUNCTION()
 	void OnRep_KillLogUpdated();
 
 	UFUNCTION()
-	void AddKillLogEntry(const FString& KillerName, const FString& VictimName);
+	void OnRep_PlayerList();
 
-	//UFUNCTION()
+	UFUNCTION()
+	void AddKillLogEntry(const FString& KillerName, const FString& WeaponName ,const FString& VictimName);
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void BeginPlay() override;
+
+	UPROPERTY()
+	TObjectPtr<class ATACPlayerController> FirstPlayerController;
+
+
 	
 };

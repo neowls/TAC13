@@ -10,7 +10,20 @@ public class TAC13 : ModuleRules
 		
 		PublicIncludePaths.AddRange(new string[] { "TAC13" });
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "NavigationSystem", "AIModule", "GameplayTasks"  });
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core", 
+			"CoreUObject", 
+			"Engine", 
+			"InputCore", 
+			"EnhancedInput", 
+			"UMG", 
+			"NavigationSystem", 
+			"AIModule", 
+			"GameplayTasks",
+			"OnlineSubsystem",
+			"OnlineSubsystemSteam"
+		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "AnimGraphRuntime" });
 

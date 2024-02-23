@@ -7,6 +7,7 @@
 #include "InputActionValue.h"
 #include "Weapon/TACWeapon.h"
 #include "Interface/TACCharacterHUDInterface.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "TACCharacterPlayer.generated.h"
 
 class ATACPlayerState;
@@ -42,11 +43,15 @@ protected:
 
 	virtual void RespawnCharacter() override;
 
+	void GetOnlineSubsystem();
+
 	FTimerHandle RespawnTimer;
 
 	float RespawnDelayTime = 3.0f;
 	
 	FOnScoreboardChangedDelegate OnScoreboardChanged;
+
+	IOnlineSessionPtr OnlineSessionInterface;
 
 #pragma region FIRE
 
