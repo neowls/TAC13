@@ -7,22 +7,17 @@
 #include "TACWeaponComponent.generated.h"
 
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class TAC13_API UTACWeaponComponent : public UActorComponent
+UCLASS()
+class TAC13_API UTACWeaponComponent : public USkeletalMeshComponent
 {
 	GENERATED_BODY()
 
 public:	
-	// Sets default values for this component's properties
 	UTACWeaponComponent();
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-		
+public:
+	
 };

@@ -394,15 +394,14 @@ void ATACCharacterPlayer::PlayFireAnimation()
 	{
 		ArmAnimInstance->StopAllMontages(0.0f);
 		ArmAnimInstance->Montage_Play(FireArmMontage);
+		CurrentWeapon->ConsumingAmmo();
+		OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
 	}
 	else
 	{
 		BodyAnimInstance->StopAllMontages(0.0f);
 		BodyAnimInstance->Montage_Play(FireMontage);
 	}
-	CurrentWeapon->ConsumingAmmo();
-	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
-	
 }
 
 void ATACCharacterPlayer::ServerRPCFire_Implementation(float FireStartTime)
@@ -464,16 +463,12 @@ void ATACCharacterPlayer::DropWeapon()
 	CurrentWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 	CurrentWeapon->GetMesh()->SetSimulatePhysics(true);
 	CurrentWeapon->GetMesh()->SetCollisionProfileName("Item");
-	CurrentWeapon = nullptr;
 	EquipWeapon(0);
 }
 
 void ATACCharacterPlayer::ReloadingWeapon()
 {
 	CurrentWeapon->ReloadingAmmo();
-	
-	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
-	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
 }
 
 
@@ -491,6 +486,9 @@ void ATACCharacterPlayer::OnRep_OwnWeapons()
 void ATACCharacterPlayer::OnRep_CurrentWeapon()
 {
 	CurrentWeapon->SetActorHiddenInGame(false);
+	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
+	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
+	OnWeaponNameChanged.Broadcast(CurrentWeapon->GetWeaponName());
 }
 
 
@@ -513,10 +511,6 @@ void ATACCharacterPlayer::EquipWeapon(const uint8 Index)
 	FireTime = 60 / CurrentWeapon->GetWeaponStat().FireRate;
 	OnRep_CurrentWeapon();
 	ArmAnimInstance->SetNewSight();
-	
-	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
-	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
-	OnWeaponNameChanged.Broadcast(CurrentWeapon->GetWeaponName());
 }
 
 

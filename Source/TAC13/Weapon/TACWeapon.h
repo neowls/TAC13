@@ -73,11 +73,12 @@ public:
 	virtual void SetOwner(AActor* NewOwner) override;
 
 	void ChangeFireMode();
-
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	TObjectPtr<USceneComponent> Root;
@@ -103,7 +104,7 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, Replicated)
 	uint8 CurrentAmmo;
 	
-	UPROPERTY(VisibleInstanceOnly, Replicated)
+	UPROPERTY(VisibleInstanceOnly, ReplicatedUsing = OnRep_UpdateAmmo)
 	uint8 OwnAmmo;
 
 	UPROPERTY(VisibleInstanceOnly, Replicated)
@@ -130,6 +131,9 @@ public:
 
 	UFUNCTION()
 	void ResetWeaponData();
+
+	UFUNCTION()
+	void OnRep_UpdateAmmo();
 	
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE USkeletalMeshComponent* GetMesh() const { return Mesh; }

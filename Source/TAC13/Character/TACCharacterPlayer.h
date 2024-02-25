@@ -118,6 +118,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	void SpawnWeapon(FName WeaponName);
 
+	UFUNCTION()
+	void ReloadingWeapon();
+
 protected:
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite , Category = Weapon)
@@ -145,9 +148,6 @@ protected:
 
 	UFUNCTION()
 	void DropWeapon();
-
-	UFUNCTION()
-	void ReloadingWeapon();
 	
 	void PlayChangeWeaponAnimation();
 	

@@ -16,7 +16,8 @@ ATACWeapon::ATACWeapon()
 	Sight = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Optic"));
 	Sight->SetupAttachment(Mesh, "Sight");
 	Sight->CastShadow = false;
-	
+
+	SetReplicates(true);
 }
 
 void ATACWeapon::SetOwner(AActor* NewOwner)
@@ -35,13 +36,14 @@ void ATACWeapon::ChangeFireMode()
 	TAC_LOG(LogTACNetwork, Log, TEXT("Current Fire Mode : %hhd"), CurrentFireMode);
 }
 
+
 void ATACWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ATACWeapon, WeaponStat);
-	DOREPLIFETIME(ATACWeapon, OwnAmmo);
-	DOREPLIFETIME(ATACWeapon, CurrentAmmo);
 	DOREPLIFETIME(ATACWeapon, WeaponName);
+	DOREPLIFETIME_CONDITION(ATACWeapon, OwnAmmo, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(ATACWeapon, CurrentAmmo,COND_OwnerOnly);
 }
 
 
@@ -52,21 +54,24 @@ void ATACWeapon::BeginPlay()
 
 void ATACWeapon::ConsumingAmmo()
 {
-	if(CurrentOwner->IsLocallyControlled())
 	ServerRPCConsumingAmmo();
 }
 
 void ATACWeapon::ReloadingAmmo()
 {
-	if(CurrentOwner->IsLocallyControlled())
 	ServerRPCReloadingAmmo();
-	
 }
 
 void ATACWeapon::ResetWeaponData()
 {
 	OwnAmmo = WeaponStat.MaxAmmo * 6;
 	CurrentAmmo = WeaponStat.MaxAmmo;
+}
+
+void ATACWeapon::OnRep_UpdateAmmo()
+{
+	CurrentOwner->OnCurrentAmmoChanged.Broadcast(CurrentAmmo);
+	CurrentOwner->OnOwnAmmoChanged.Broadcast(OwnAmmo);
 }
 
 void ATACWeapon::ServerRPCReloadingAmmo_Implementation()
@@ -107,5 +112,4 @@ void ATACWeapon::OnRep_SetWeaponStatData()
 	Mesh->SetSkeletalMesh(WeaponStat.OwnMesh);
 	CurrentFireMode = WeaponStat.OwnFireMode[0];
 	CurrentFireModeIdx = 0;
-	
 }

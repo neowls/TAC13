@@ -25,8 +25,6 @@ public:
 	FOnCurrentAmmoChangedDelegate OnCurrentAmmoChanged;
 	FOnOwnAmmoChangedDelegate OnOwnAmmoChanged;
 	FOnWeaponNameChangedDelegate OnWeaponNameChanged;
-
-
 	
 
 	/** Returns CameraComponent subobject **/
