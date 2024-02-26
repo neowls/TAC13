@@ -17,7 +17,7 @@ ATACWeapon::ATACWeapon()
 	Sight->SetupAttachment(Mesh, "Sight");
 	Sight->CastShadow = false;
 
-	SetReplicates(true);
+	bReplicates = true;
 }
 
 void ATACWeapon::SetOwner(AActor* NewOwner)

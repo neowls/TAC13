@@ -7,7 +7,7 @@
 
 UTACGameInstance::UTACGameInstance()
 {
-	
+	CurrentSessionName = FName("TAC13");
 }
 
 void UTACGameInstance::Init()
@@ -27,7 +27,7 @@ void UTACGameInstance::Init()
 	
 }
 
-void UTACGameInstance::OnCreateSessionComplete(FName ServerName, bool Succeeded) // 세션을 성공적으로 생성한다면 서버상에서 특정맵으로 이동
+void UTACGameInstance::OnCreateSessionComplete(FName SessionName, bool Succeeded) // 세션을 성공적으로 생성한다면 서버상에서 특정맵으로 이동
 {
 	UE_LOG(LogTemp, Warning, TEXT("OnCreateSessionComplete, Succeeded : %d") , Succeeded);
 	if(Succeeded)
@@ -38,13 +38,15 @@ void UTACGameInstance::OnCreateSessionComplete(FName ServerName, bool Succeeded)
 
 void UTACGameInstance::OnFindSessionsComplete(bool Succeeded) // 세션을 성공적으로 탐색했다면 해당 세션들의 정보를 가져와 이를 Broadcast 함
 {
+	OnSearchingServer.Broadcast(false);
 	UE_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete, Succeeded : %d") , Succeeded);
 	if(Succeeded)
 	{
 		TArray<FOnlineSessionSearchResult> SearchResults = SessionSearch->SearchResults;
-
+		int32 ArrayIndex = -1;	
 		for(FOnlineSessionSearchResult Result : SearchResults)
 		{
+			++ArrayIndex;
 			if(!Result.IsValid()) continue;
 			FServerInfo Info;
 			FString ServerName = "Empty Server Name";
@@ -56,9 +58,10 @@ void UTACGameInstance::OnFindSessionsComplete(bool Succeeded) // 세션을 성�
 			Info.ServerName = ServerName;
 			Info.MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
 			Info.CurrentPlayers = Info.MaxPlayers - Result.Session.NumOpenPublicConnections;
+			Info.ServerArrayIndex = ArrayIndex;
 			Info.SetPlayerCount();
 			
-			ServerListDelegate.Broadcast(Info);
+			OnServerList.Broadcast(Info);
 		}
 		
 		UE_LOG(LogTemp, Warning, TEXT("Search Results, Server Count : %d") , SearchResults.Num());
@@ -113,19 +116,30 @@ void UTACGameInstance::CreateServer(FString ServerName, FString HostName) // 세
 	SessionSettings.Set(FName("SERVER_NAME_KEY"), ServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	SessionSettings.Set(FName("SERVER_HOSTNAME_KEY"), HostName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	
-	SessionInterface->CreateSession(0, FName("TAC"), SessionSettings);
+	SessionInterface->CreateSession(0, CurrentSessionName, SessionSettings);
 	
 }
 
-void UTACGameInstance::JoinServer()
+void UTACGameInstance::JoinServer(int32 ArrayIndex)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Join Server"));
-	//SessionInterface->JoinSession(0, FName("TAC"), SearchResults[0]);
+	//SessionInterface->JoinSession(0, CurrentSessionName, SearchResults[0]);
+	FOnlineSessionSearchResult Result = SessionSearch->SearchResults[ArrayIndex];
+	if(Result.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("JOINING AT INDEX : %d"), ArrayIndex);
+		SessionInterface->JoinSession(0, CurrentSessionName, Result);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("FAILED TO JOIN SERVER AT INDEX : %d"), ArrayIndex);
+	}
 }
 
 void UTACGameInstance::FindServer() // 세션 탐색
 {
 	UE_LOG(LogTemp, Warning, TEXT("Find Server"));
+	OnSearchingServer.Broadcast(true);
 	
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
 	

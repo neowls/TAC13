@@ -15,6 +15,7 @@
 #include "Engine/DamageEvents.h"
 #include "Game/TACGameMode.h"
 #include "Game/TACPlayerState.h"
+#include "GameData/NetObject.h"
 #include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Input/TACControlData.h"
@@ -135,12 +136,14 @@ void ATACCharacterPlayer::BeginPlay()
 	SetCharacterControl(PlayControlData);
 	if(HasAuthority())
 	{
+		SomeNetObject = NewObject<UNetObject>();
 		SpawnWeapon("VAL");
 		SpawnWeapon("KA47");
 		SpawnWeapon("AR4");
 		EquipWeapon(0);
 	}
-	//GetOnlineSubsystem();
+
+	
 }
 
 void ATACCharacterPlayer::PossessedBy(AController* NewController)
@@ -183,6 +186,7 @@ void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME(ATACCharacterPlayer, bCanFire);
 	DOREPLIFETIME_CONDITION(ATACCharacterPlayer, CurrentWeapon, COND_None);
 	DOREPLIFETIME_CONDITION(ATACCharacterPlayer, OwnWeapons, COND_None);
+	DOREPLIFETIME(ATACCharacterPlayer, SomeNetObject);
 }
 
 void ATACCharacterPlayer::GetOnlineSubsystem()
@@ -483,6 +487,11 @@ void ATACCharacterPlayer::OnRep_OwnWeapons()
 }
 
 
+void ATACCharacterPlayer::ServerRPCChangeSomeVal_Implementation()
+{
+	
+}
+
 void ATACCharacterPlayer::OnRep_CurrentWeapon()
 {
 	CurrentWeapon->SetActorHiddenInGame(false);
@@ -603,7 +612,14 @@ void ATACCharacterPlayer::Leaning(const FInputActionValue& Value)
 
 void ATACCharacterPlayer::Melee()
 {
-	
+	if(SomeNetObject != nullptr)
+	{
+		TAC_LOG(LogTACNetwork, Log, TEXT("Replicated"));		
+	}
+	else
+	{
+		TAC_LOG(LogTACNetwork, Log, TEXT("Not Replicated"));	
+	}
 }
 
 #pragma endregion 

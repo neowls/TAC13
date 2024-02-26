@@ -96,6 +96,9 @@ protected:
 	
 	float AcceptMinCheckTime = 0.1f;
 
+	UPROPERTY(Replicated)
+	TObjectPtr<class UNetObject> SomeNetObject;
+
 #pragma endregion 
 
 #pragma region WEAPON
@@ -136,6 +139,9 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPCSetCurrentWeapon(const uint8 Index);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPCChangeSomeVal();
 	
 	UFUNCTION()
 	void OnRep_CurrentWeapon();

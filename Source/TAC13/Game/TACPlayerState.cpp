@@ -15,7 +15,6 @@ ATACPlayerState::ATACPlayerState()
 void ATACPlayerState::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-	SetPlayerName("Player");
 }
 
 void ATACPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

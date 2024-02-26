@@ -25,13 +25,17 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	int32 MaxPlayers = 0;
 
+	UPROPERTY(BlueprintReadOnly)
+	int32 ServerArrayIndex;
+
 	void SetPlayerCount()
 	{
 		PlayerCountStr = FString(FString::FromInt(CurrentPlayers) + "/" + FString::FromInt(MaxPlayers));
 	}
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FServerDelegate, FServerInfo, ServerListDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnServerListDelegate, FServerInfo, ServerInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSeachingServerDelegate, bool, bIsSearching);
 
 /**
  * 
@@ -47,7 +51,7 @@ public:
 protected:
 	virtual void Init() override;
 
-	virtual void OnCreateSessionComplete(FName ServerName, bool Succeeded);
+	virtual void OnCreateSessionComplete(FName SessionName, bool Succeeded);
 	virtual void OnFindSessionsComplete(bool Succeeded);
 	virtual void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
@@ -55,15 +59,20 @@ protected:
 	void CreateServer(FString ServerName, FString HostName);
 
 	UFUNCTION(BlueprintCallable)
-	void JoinServer();
+	void JoinServer(int32 ArrayIndex);
 
 	UFUNCTION(BlueprintCallable)
 	void FindServer();
+
+	FName CurrentSessionName;
 
 	IOnlineSessionPtr SessionInterface;
 
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 
 	UPROPERTY(BlueprintAssignable)
-	FServerDelegate ServerListDelegate;
+	FOnServerListDelegate OnServerList;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnSeachingServerDelegate OnSearchingServer;
 };
