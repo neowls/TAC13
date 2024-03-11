@@ -25,11 +25,11 @@ public:
 	FString GetHPText();
 	
 protected:
-	UPROPERTY()
-	TObjectPtr<class UProgressBar> HPProgressBar;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UProgressBar> HPProgressBar;
 
-	UPROPERTY()
-	TObjectPtr<class UTextBlock> HPText;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UTextBlock> HPText;
 	
 	const uint8 MaxHP = 100;
 

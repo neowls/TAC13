@@ -19,7 +19,6 @@ void UTACKillLogWidget::NativeConstruct()
 
 void UTACKillLogWidget::UpdateKillLogText(FString InKillerName, FString InWeaponName, FString InVictimName)
 {
-	if(!AttackerTextBlock || !WeaponNameTextBlock || !VictimTextBlock) return;
 	AttackerTextBlock->SetText(FText::FromString(InKillerName));
 	WeaponNameTextBlock->SetText(FText::FromString(InWeaponName));
 	VictimTextBlock->SetText(FText::FromString(InVictimName));

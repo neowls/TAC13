@@ -24,14 +24,14 @@ public:
 protected:
 	virtual void NativeConstruct() override;
 
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<UTextBlock> AttackerTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<UTextBlock> AttackerTextBlock;
 
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<UTextBlock> WeaponNameTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<UTextBlock> WeaponNameTextBlock;
 
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<UTextBlock> VictimTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<UTextBlock> VictimTextBlock;
 
 	FTimerHandle DeleteTimer;
 	float DeleteDelayTime = 4.0f;

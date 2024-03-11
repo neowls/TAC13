@@ -14,19 +14,13 @@ void UTACWeaponWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	OwnAmmoTextBlock = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtOwnAmmo")));
-	ensure(OwnAmmoTextBlock);
-	
 	CurrentAmmoTextBlock = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtCurrentAmmo")));
-	ensure(CurrentAmmoTextBlock);
-
 	WeaponNameTextBlock = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtWeaponName")));
-	ensure(WeaponNameTextBlock);
-	
 }
 
 void UTACWeaponWidget::UpdateOwnAmmo(uint8 NewOwnAmmo)
 {
-	if(OwnAmmoTextBlock)
+	if(OwnAmmoTextBlock.IsValid())
 	{
 		OwnAmmoTextBlock->SetText(FText::FromString(GetAmmoText(NewOwnAmmo)));
 	}
@@ -34,7 +28,7 @@ void UTACWeaponWidget::UpdateOwnAmmo(uint8 NewOwnAmmo)
 
 void UTACWeaponWidget::UpdateCurrentAmmo(uint8 NewCurrentAmmo)
 {
-	if(CurrentAmmoTextBlock)
+	if(CurrentAmmoTextBlock.IsValid())
 	{
 		CurrentAmmoTextBlock->SetText(FText::FromString(GetAmmoText(NewCurrentAmmo)));
 	}
@@ -42,7 +36,7 @@ void UTACWeaponWidget::UpdateCurrentAmmo(uint8 NewCurrentAmmo)
 
 void UTACWeaponWidget::UpdateWeaponName(FString NewWeaponName)
 {
-	if(WeaponNameTextBlock)
+	if(WeaponNameTextBlock.IsValid())
 	{
 		WeaponNameTextBlock->SetText(FText::FromString(NewWeaponName));
 	}

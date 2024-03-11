@@ -29,14 +29,14 @@ protected:
 	
 	FPlayerScore* PlayerScoreInfoPtr;
 
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<class UTextBlock> PlayerTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UTextBlock> PlayerTextBlock;
 
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<class UTextBlock> KillScoreTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UTextBlock> KillScoreTextBlock;
 
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<class UTextBlock> DeathScoreTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UTextBlock> DeathScoreTextBlock;
 
 	UFUNCTION(BlueprintPure)
 	FText GetPlayerNameText() const { return FText::FromString(PlayerScoreInfoPtr ? PlayerScoreInfoPtr->PlayerName : "None");	}

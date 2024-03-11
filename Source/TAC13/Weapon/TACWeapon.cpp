@@ -46,7 +46,6 @@ void ATACWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME_CONDITION(ATACWeapon, CurrentAmmo,COND_OwnerOnly);
 }
 
-
 void ATACWeapon::BeginPlay()
 {
 	Super::BeginPlay();
@@ -60,6 +59,7 @@ void ATACWeapon::ConsumingAmmo()
 void ATACWeapon::ReloadingAmmo()
 {
 	ServerRPCReloadingAmmo();
+	WeaponStatChange();
 }
 
 void ATACWeapon::ResetWeaponData()
@@ -97,6 +97,11 @@ void ATACWeapon::ServerRPCConsumingAmmo_Implementation()
 	CurrentAmmo--;
 }
 
+void ATACWeapon::WeaponStatChange_Implementation()
+{
+	WeaponStat.FireRate++;
+}
+
 void ATACWeapon::LoadWeaponStatData(const FName InName)
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("Begin"));
@@ -112,4 +117,5 @@ void ATACWeapon::OnRep_SetWeaponStatData()
 	Mesh->SetSkeletalMesh(WeaponStat.OwnMesh);
 	CurrentFireMode = WeaponStat.OwnFireMode[0];
 	CurrentFireModeIdx = 0;
+	TAC_LOG(LogTACNetwork, Log, TEXT("Changed WeaponStat"));
 }

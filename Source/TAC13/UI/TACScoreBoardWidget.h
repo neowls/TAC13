@@ -32,8 +32,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<class UTACUserWidget> ScoreWidgetClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TObjectPtr<class UVerticalBox> ScoreVerticalBox;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BindWidget))
+	TWeakObjectPtr<class UVerticalBox> ScoreVerticalBox;
 
 	TArray<class ATACPlayerState*> CurrentPlayerList;
 

@@ -116,7 +116,8 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 	bCanFire = true;
-	
+
+	bReplicateUsingRegisteredSubObjectList = true;
 }
 
 void ATACCharacterPlayer::BeginPlay()
@@ -137,6 +138,7 @@ void ATACCharacterPlayer::BeginPlay()
 	if(HasAuthority())
 	{
 		SomeNetObject = NewObject<UNetObject>();
+		AddReplicatedSubObject(SomeNetObject);
 		SpawnWeapon("VAL");
 		SpawnWeapon("KA47");
 		SpawnWeapon("AR4");
@@ -144,6 +146,17 @@ void ATACCharacterPlayer::BeginPlay()
 	}
 
 	
+}
+
+void ATACCharacterPlayer::Destroyed()
+{
+	Super::Destroyed();
+	if(CurrentWeapon)
+	{
+		CurrentWeapon->Destroy();
+		for(auto iter : OwnWeapons) iter->Destroy();		
+	}
+	RemoveReplicatedSubObject(SomeNetObject);
 }
 
 void ATACCharacterPlayer::PossessedBy(AController* NewController)
@@ -177,6 +190,7 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 void ATACCharacterPlayer::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+	
 }
 
 void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -489,7 +503,8 @@ void ATACCharacterPlayer::OnRep_OwnWeapons()
 
 void ATACCharacterPlayer::ServerRPCChangeSomeVal_Implementation()
 {
-	
+	SomeNetObject->SomeVal++;
+	TAC_LOG(LogTACNetwork, Log, TEXT("%d"), SomeNetObject->SomeVal);
 }
 
 void ATACCharacterPlayer::OnRep_CurrentWeapon()
@@ -614,7 +629,9 @@ void ATACCharacterPlayer::Melee()
 {
 	if(SomeNetObject != nullptr)
 	{
-		TAC_LOG(LogTACNetwork, Log, TEXT("Replicated"));		
+		TAC_LOG(LogTACNetwork, Log, TEXT("Replicated"));
+		ServerRPCChangeSomeVal();
+		TAC_LOG(LogTACNetwork, Log, TEXT("%d"), SomeNetObject->SomeVal);
 	}
 	else
 	{

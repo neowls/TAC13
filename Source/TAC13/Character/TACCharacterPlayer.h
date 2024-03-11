@@ -32,6 +32,8 @@ protected:
 	virtual void PostInitializeComponents() override;
 	
 	virtual void BeginPlay() override;
+
+	virtual void Destroyed() override;
 	
 	virtual void PossessedBy(AController* NewController) override;
 	
@@ -96,8 +98,8 @@ protected:
 	
 	float AcceptMinCheckTime = 0.1f;
 
-	UPROPERTY(Replicated)
-	TObjectPtr<class UNetObject> SomeNetObject;
+	UPROPERTY(Replicated, BlueprintReadWrite)
+	class UNetObject* SomeNetObject;
 
 #pragma endregion 
 

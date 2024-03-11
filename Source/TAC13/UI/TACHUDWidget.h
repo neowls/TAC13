@@ -27,23 +27,23 @@ public:
 	void SetScoreBoardPlayer(const TArray<class ATACPlayerState*>& InArray);
 	void ScoreBoardOnOff(uint8 bIsScoreBoardOn);
 
-	FORCEINLINE class UTACScoreBoardWidget* GetScoreBoardWidget() const { return ScoreBoard; }
+	FORCEINLINE class UTACScoreBoardWidget* GetScoreBoardWidget() const { return ScoreBoard.Get(); }
 	
 protected:
 	virtual void NativeConstruct() override;
 
 protected:
-	UPROPERTY()
-	TObjectPtr<class UTACHPWidget> HPBar;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UTACHPWidget> HPBar;
 
-	UPROPERTY()
-	TObjectPtr<class UTACWeaponWidget> WeaponStat;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UTACWeaponWidget> WeaponStat;
 	
-	UPROPERTY()
-	TObjectPtr<class UVerticalBox> KillLogBox;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UVerticalBox> KillLogBox;
 
-	UPROPERTY()
-	TObjectPtr<class UTACScoreBoardWidget> ScoreBoard;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TWeakObjectPtr<class UTACScoreBoardWidget> ScoreBoard;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<class UUserWidget> KillLogClass;

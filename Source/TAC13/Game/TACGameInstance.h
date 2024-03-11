@@ -8,6 +8,22 @@
 #include "TACGameInstance.generated.h"
 
 USTRUCT(BlueprintType)
+struct FCreateServerInfo
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(BlueprintReadWrite)
+	FString ServerName;
+
+	UPROPERTY(BlueprintReadWrite)
+	int32 MaxPlayers = 0;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool IsLan = false;
+};
+
+USTRUCT(BlueprintType)
 struct FServerInfo
 {
 	GENERATED_BODY()
@@ -20,14 +36,18 @@ public:
 	FString PlayerCountStr;
 
 	UPROPERTY(BlueprintReadOnly)
+	bool IsLan = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Ping = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 ServerArrayIndex = 0;
+	
 	int32 CurrentPlayers = 0;
-
-	UPROPERTY(BlueprintReadOnly)
+	
 	int32 MaxPlayers = 0;
-
-	UPROPERTY(BlueprintReadOnly)
-	int32 ServerArrayIndex;
-
+	
 	void SetPlayerCount()
 	{
 		PlayerCountStr = FString(FString::FromInt(CurrentPlayers) + "/" + FString::FromInt(MaxPlayers));
@@ -56,7 +76,7 @@ protected:
 	virtual void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
 	UFUNCTION(BlueprintCallable)
-	void CreateServer(FString ServerName, FString HostName);
+	void CreateServer(FCreateServerInfo InCreateServerInfo);
 
 	UFUNCTION(BlueprintCallable)
 	void JoinServer(int32 ArrayIndex);

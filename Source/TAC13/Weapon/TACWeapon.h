@@ -79,6 +79,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	TObjectPtr<USceneComponent> Root;
@@ -115,6 +116,9 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPCReloadingAmmo();
+
+	UFUNCTION(Server, Reliable)
+	void WeaponStatChange();
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)

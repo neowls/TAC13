@@ -49,19 +49,19 @@ void UTACHUDWidget::UpdateKillLog(FString InAttacker, FString InWeaponName, FStr
 
 void UTACHUDWidget::UpdateScoreBoard()
 {
-	if(ScoreBoard)
+	if(ScoreBoard.IsValid())
 	ScoreBoard->UpdateScoreBoard();
 }
 
 void UTACHUDWidget::SetScoreBoardPlayer(const TArray<ATACPlayerState*>& InArray)
 {
-	if(ScoreBoard)
+	if(ScoreBoard.IsValid())
 	ScoreBoard->SetPlayerList(InArray);
 }
 
 void UTACHUDWidget::ScoreBoardOnOff(uint8 bIsScoreBoardOn)
 {
-	if(!ScoreBoard) return;
+	if(!ScoreBoard.IsValid()) return;
 	if(bIsScoreBoardOn) ScoreBoard->SetVisibility(ESlateVisibility::Visible);
 	else ScoreBoard->SetVisibility(ESlateVisibility::Hidden);
 }
@@ -70,19 +70,7 @@ void UTACHUDWidget::ScoreBoardOnOff(uint8 bIsScoreBoardOn)
 void UTACHUDWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-
-	HPBar = Cast<UTACHPWidget>(GetWidgetFromName(TEXT("WidgetHP")));
-	ensure(HPBar);
 	
-	WeaponStat = Cast<UTACWeaponWidget>(GetWidgetFromName(TEXT("WidgetWeapon")));
-	ensure(WeaponStat);
-
-	KillLogBox = Cast<UVerticalBox>(GetWidgetFromName(TEXT("BoxKillLog")));
-	ensure(KillLogBox);
-
-	ScoreBoard = Cast<UTACScoreBoardWidget>(GetWidgetFromName(TEXT("WidgetScoreBoard")));
-	ensure(ScoreBoard);
-
 	ITACCharacterHUDInterface* HUDPawn = Cast<ITACCharacterHUDInterface>(GetOwningPlayerPawn());
 	if(HUDPawn)
 	{

@@ -58,20 +58,17 @@ void UTACGameInstance::OnFindSessionsComplete(bool Succeeded) // 세션을 성�
 			Info.ServerName = ServerName;
 			Info.MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
 			Info.CurrentPlayers = Info.MaxPlayers - Result.Session.NumOpenPublicConnections;
-			Info.ServerArrayIndex = ArrayIndex;
+
 			Info.SetPlayerCount();
+			
+			Info.IsLan = Result.Session.SessionSettings.bIsLANMatch;
+			Info.Ping = Result.PingInMs;
+			Info.ServerArrayIndex = ArrayIndex;
 			
 			OnServerList.Broadcast(Info);
 		}
 		
 		UE_LOG(LogTemp, Warning, TEXT("Search Results, Server Count : %d") , SearchResults.Num());
-		
-		if(SearchResults.Num())
-		{
-			/*UE_LOG(LogTemp, Warning, TEXT("Joining Server"));
-			SessionInterface->JoinSession(0, FName("TAC"), SearchResults[0]);*/
-		}
-
 	}
 }
 
@@ -88,33 +85,33 @@ void UTACGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 }
 
 
-void UTACGameInstance::CreateServer(FString ServerName, FString HostName) // 세션 생성
+void UTACGameInstance::CreateServer(FCreateServerInfo InCreateServerInfo) // 세션 생성
 {
 	UE_LOG(LogTemp, Warning, TEXT("Created Server"));
 	
 	FOnlineSessionSettings SessionSettings;
-	SessionSettings.bAllowJoinInProgress = true;
-	SessionSettings.bIsDedicated = false;
+	SessionSettings.bAllowJoinInProgress = true;		// 진행중인 세션에 참가 가능한지?
+	SessionSettings.bIsDedicated = false;				// 데디 케이트 서버인가?
+
+	
 	if(IOnlineSubsystem::Get()->GetSubsystemName() != "NULL")
 	{
-		SessionSettings.bIsLANMatch = false;
+		SessionSettings.bIsLANMatch = false;	
 		SessionSettings.bUseLobbiesIfAvailable = false;
 	}
 	else
 	{
-		SessionSettings.bIsLANMatch = true;
-		SessionSettings.bUseLobbiesIfAvailable = true;
+		SessionSettings.bIsLANMatch = true;				// LAN 매치로 설정하는지?
+		SessionSettings.bUseLobbiesIfAvailable = true;	// 로비 시스템을 사용하는지?
 	}
 	
-	SessionSettings.bShouldAdvertise = true;
-	SessionSettings.bUsesPresence = true;
-	
-	SessionSettings.NumPublicConnections = 8;
+	SessionSettings.bShouldAdvertise = true;			// 온라인 매치메이킹에 공개되는지?
+	SessionSettings.bUsesPresence = true;				// 참여자가 서로의 온라인 상태를 확인할 수 있는지?
+	SessionSettings.NumPublicConnections = InCreateServerInfo.MaxPlayers;
 	
 	
 
-	SessionSettings.Set(FName("SERVER_NAME_KEY"), ServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-	SessionSettings.Set(FName("SERVER_HOSTNAME_KEY"), HostName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	SessionSettings.Set(FName("SERVER_NAME_KEY"), InCreateServerInfo.ServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	
 	SessionInterface->CreateSession(0, CurrentSessionName, SessionSettings);
 	
@@ -155,5 +152,4 @@ void UTACGameInstance::FindServer() // 세션 탐색
 	SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 	
 	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
-	
 }

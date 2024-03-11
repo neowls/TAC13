@@ -13,12 +13,6 @@ UTACHPWidget::UTACHPWidget(const FObjectInitializer& ObjectInitializer) : Super(
 void UTACHPWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	HPProgressBar = Cast<UProgressBar>(GetWidgetFromName(TEXT("PbHPBar")));
-	ensure(HPProgressBar);
-
-	HPText = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtHP")));
-	ensure(HPText);
-	
 }
 
 void UTACHPWidget::UpdateHP(uint8 NewCurrentHP)
@@ -28,12 +22,12 @@ void UTACHPWidget::UpdateHP(uint8 NewCurrentHP)
 
 	const float HPPercent = CurrentHP * 0.01f;
 	
-	if(HPProgressBar)
+	if(HPProgressBar.IsValid())
 	{
 		HPProgressBar->SetPercent(HPPercent);
 	}
 
-	if(HPText)
+	if(HPText.IsValid())
 	{
 		HPText->SetText(FText::FromString(GetHPText()));
 	}

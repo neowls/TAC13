@@ -29,14 +29,14 @@ public:
 	FString GetAmmoText(uint8 NewAmmo);
 
 protected:
-	UPROPERTY()
-	TObjectPtr<class UTextBlock> OwnAmmoTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	TWeakObjectPtr<class UTextBlock> OwnAmmoTextBlock;
 
-	UPROPERTY()
-	TObjectPtr<class UTextBlock> CurrentAmmoTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	TWeakObjectPtr<class UTextBlock> CurrentAmmoTextBlock;
 
-	UPROPERTY()
-	TObjectPtr<class UTextBlock> WeaponNameTextBlock;
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	TWeakObjectPtr<class UTextBlock> WeaponNameTextBlock;
 	
 	UPROPERTY()
 	uint8 CurrentAmmo;
