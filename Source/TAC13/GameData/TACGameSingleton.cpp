@@ -6,12 +6,21 @@ DEFINE_LOG_CATEGORY(LogTACGameSingleton);
 
 UTACGameSingleton::UTACGameSingleton()
 {
-	static ConstructorHelpers::FObjectFinder<UDataTable> DataTableRef(TEXT("/Script/Engine.DataTable'/Game/_TAC/DataTable/DT_Weapons.DT_Weapons'"));
-	if(nullptr != DataTableRef.Object)
+	static ConstructorHelpers::FObjectFinder<UDataTable> WeaponDataTableRef(TEXT("/Script/Engine.DataTable'/Game/_TAC/DataTable/DT_Weapons.DT_Weapons'"));
+	if(nullptr != WeaponDataTableRef.Object)
 	{
-		WeaponStatTable = DataTableRef.Object;
-		check(WeaponStatTable->GetRowMap().Num() > 0)
+		WeaponInfoTable = WeaponDataTableRef.Object;
+		check(WeaponInfoTable->GetRowMap().Num() > 0)
 	}
+
+	static ConstructorHelpers::FObjectFinder<UDataTable> AttachmentDataTableRef(TEXT("/Script/Engine.DataTable'/Game/_TAC/DataTable/DT_Attachments.DT_Attachments'"));
+	if(nullptr != AttachmentDataTableRef.Object)
+	{
+		AttachmentInfoTable = AttachmentDataTableRef.Object;
+		check(AttachmentInfoTable->GetRowMap().Num() > 0)
+	}
+
+	
 }
 
 UTACGameSingleton& UTACGameSingleton::Get()

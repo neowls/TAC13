@@ -48,6 +48,7 @@ void UTACAnimInstance::UpdateCharacterStateData()
 	bIsSprint = Owner->bIsSprinting;
 	bIsJumping = false;
 	bIsFalling = false;
+	//bHoldWeapon = Owner
 	if(Owner->GetCharacterMovement()->MovementMode == MOVE_Falling)
 	{
 		if(WorldVelocity.Z > 0.f) bIsJumping = true;

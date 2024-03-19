@@ -87,6 +87,9 @@ protected:
 	uint8 bCrouchStateChange : 1;
 
 	UPROPERTY(BlueprintReadOnly, Category = State)
+	uint8 bHoldWeapon : 1;
+
+	UPROPERTY(BlueprintReadOnly, Category = State)
 	float TimeToJumpApex;
 	
 };

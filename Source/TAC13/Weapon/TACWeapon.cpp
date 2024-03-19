@@ -1,6 +1,6 @@
 #include "Weapon/TACWeapon.h"
 #include "TAC13.h"
-#include "Character/TACCharacterPlayer.h"
+#include "Character/TACCharacterBase.h"
 #include "GameData/TACGameSingleton.h"
 #include "Net/UnrealNetwork.h"
 
@@ -23,27 +23,24 @@ ATACWeapon::ATACWeapon()
 void ATACWeapon::SetOwner(AActor* NewOwner)
 {
 	Super::SetOwner(NewOwner);
-	CurrentOwner = Cast<ATACCharacterPlayer>(NewOwner);
+	CurrentOwner = Cast<ATACCharacterBase>(NewOwner);
 }
 
 void ATACWeapon::ChangeFireMode()
 {
-	if(WeaponStat.OwnFireMode.Num() > 1)
+	if(WeaponInfo.OwnFireMode.Num() > 1)
 	{
-		CurrentFireModeIdx == WeaponStat.OwnFireMode.Num()-1 ? CurrentFireModeIdx = 0 : CurrentFireModeIdx++;
-		CurrentFireMode = WeaponStat.OwnFireMode[CurrentFireModeIdx];
+		CurrentFireModeIdx == WeaponInfo.OwnFireMode.Num()-1 ? CurrentFireModeIdx = 0 : CurrentFireModeIdx++;
+		WeaponStat.CurrentFireMode = WeaponInfo.OwnFireMode[CurrentFireModeIdx];
 	}
-	TAC_LOG(LogTACNetwork, Log, TEXT("Current Fire Mode : %hhd"), CurrentFireMode);
 }
 
 
 void ATACWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ATACWeapon, WeaponInfo);
 	DOREPLIFETIME(ATACWeapon, WeaponStat);
-	DOREPLIFETIME(ATACWeapon, WeaponName);
-	DOREPLIFETIME_CONDITION(ATACWeapon, OwnAmmo, COND_OwnerOnly);
-	DOREPLIFETIME_CONDITION(ATACWeapon, CurrentAmmo,COND_OwnerOnly);
 }
 
 void ATACWeapon::BeginPlay()
@@ -51,71 +48,55 @@ void ATACWeapon::BeginPlay()
 	Super::BeginPlay();
 }
 
-void ATACWeapon::ConsumingAmmo()
+void ATACWeapon::InitWeaponStat()
 {
-	ServerRPCConsumingAmmo();
+	WeaponStat.CurrentFireMode = WeaponInfo.OwnFireMode[0];
+	WeaponStat.OwnAmmo = WeaponInfo.MaxAmmo * 6;
+	WeaponStat.CurrentAmmo = WeaponInfo.MaxAmmo;
 }
 
-void ATACWeapon::ReloadingAmmo()
+void ATACWeapon::UseAmmo()
 {
-	ServerRPCReloadingAmmo();
-	WeaponStatChange();
+	if(WeaponStat.CurrentAmmo <= 0) return;
+	WeaponStat.CurrentAmmo--;
+	TAC_LOG(LogTACNetwork, Log, TEXT("Current Ammo : %d"), WeaponStat.CurrentAmmo);
+	CurrentOwner->OnCurrentAmmoChanged.Broadcast(WeaponStat.CurrentAmmo);
 }
 
-void ATACWeapon::ResetWeaponData()
+void ATACWeapon::Reload()
 {
-	OwnAmmo = WeaponStat.MaxAmmo * 6;
-	CurrentAmmo = WeaponStat.MaxAmmo;
-}
-
-void ATACWeapon::OnRep_UpdateAmmo()
-{
-	CurrentOwner->OnCurrentAmmoChanged.Broadcast(CurrentAmmo);
-	CurrentOwner->OnOwnAmmoChanged.Broadcast(OwnAmmo);
-}
-
-void ATACWeapon::ServerRPCReloadingAmmo_Implementation()
-{
-	if(OwnAmmo <= 0 || WeaponStat.MaxAmmo == CurrentAmmo)
+	if(WeaponStat.OwnAmmo <= 0 || WeaponInfo.MaxAmmo == WeaponStat.CurrentAmmo)
 	{
-		TAC_LOG(LogTACNetwork, Log, TEXT("No Ammo"));
+		TAC_LOG(LogTACNetwork, Log, TEXT("Can't Reload"));
 		return;
 	}
-	const uint8 WantAmmo = WeaponStat.MaxAmmo - CurrentAmmo;
-	const uint8 RealLoadAmmo = WantAmmo > OwnAmmo ? OwnAmmo : WantAmmo;
-	OwnAmmo -= RealLoadAmmo;
-	CurrentAmmo += RealLoadAmmo;
+	const uint8 WantAmmo = WeaponInfo.MaxAmmo - WeaponStat.CurrentAmmo;
+	const uint8 RealLoadAmmo = WantAmmo > WeaponStat.OwnAmmo ? WeaponStat.OwnAmmo : WantAmmo;
+	WeaponStat.OwnAmmo -= RealLoadAmmo;
+	WeaponStat.CurrentAmmo += RealLoadAmmo;
+
+	TAC_LOG(LogTACNetwork, Log, TEXT("Current Ammo : %d"), WeaponStat.CurrentAmmo);
+
+	CurrentOwner->OnCurrentAmmoChanged.Broadcast(WeaponStat.CurrentAmmo);
+	CurrentOwner->OnOwnAmmoChanged.Broadcast(WeaponStat.OwnAmmo);
 }
 
-void ATACWeapon::ServerRPCConsumingAmmo_Implementation()
-{
-	if(CurrentAmmo <= 0)
-	{
-		TAC_LOG(LogTACNetwork, Log, TEXT("Magazine is Empty. Please Reload"));
-		return;
-	}
-	CurrentAmmo--;
-}
-
-void ATACWeapon::WeaponStatChange_Implementation()
-{
-	WeaponStat.FireRate++;
-}
-
-void ATACWeapon::LoadWeaponStatData(const FName InName)
+void ATACWeapon::LoadWeaponInfoData(const FName InName)
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("Begin"));
-	WeaponStat = UTACGameSingleton::Get().GetWeaponStatData(InName);
-	WeaponName = InName.ToString();
-	OwnAmmo = WeaponStat.MaxAmmo * 6;
-	CurrentAmmo = WeaponStat.MaxAmmo;
-	OnRep_SetWeaponStatData();
+	WeaponInfo = UTACGameSingleton::Get().GetWeaponInfoData(InName);
+	WeaponInfo.Name = InName.ToString();
+	OnRep_WeaponInfo();
+	InitWeaponStat();
 }
 
-void ATACWeapon::OnRep_SetWeaponStatData()
+void ATACWeapon::OnRep_WeaponInfo()
 {
-	Mesh->SetSkeletalMesh(WeaponStat.OwnMesh);
-	CurrentFireMode = WeaponStat.OwnFireMode[0];
-	CurrentFireModeIdx = 0;
-	TAC_LOG(LogTACNetwork, Log, TEXT("Changed WeaponStat"));
+	Mesh->SetSkeletalMesh(WeaponInfo.BodyMesh);
+}
+
+void ATACWeapon::OnRep_WeaponStat()
+{
+	CurrentOwner->OnCurrentAmmoChanged.Broadcast(WeaponStat.CurrentAmmo);
+	CurrentOwner->OnOwnAmmoChanged.Broadcast(WeaponStat.OwnAmmo);
 }

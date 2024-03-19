@@ -13,9 +13,6 @@ UTACWeaponWidget::UTACWeaponWidget(const FObjectInitializer& ObjectInitializer)
 void UTACWeaponWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	OwnAmmoTextBlock = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtOwnAmmo")));
-	CurrentAmmoTextBlock = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtCurrentAmmo")));
-	WeaponNameTextBlock = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtWeaponName")));
 }
 
 void UTACWeaponWidget::UpdateOwnAmmo(uint8 NewOwnAmmo)

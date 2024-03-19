@@ -54,17 +54,8 @@ public:
 
 	virtual bool CanADS() const;
 	
-	/**
-	 * Call CharacterOwner->OnStartSprint() if successful.
-	 * In general you should set bWantsToSprint instead to have the Sprint persist during movement, or just use the Sprint functions on the owning Character.
-	 * @param	bClientSimulation	true when called when bIsSprinted is replicated to non owned clients.
-	 */
 	virtual void ADS(bool bClientSimulation = false);
 	
-	/**
-	 * Checks if default capsule size fits (no encroachment), and trigger OnEndSprint() on the owner if successful.
-	 * @param	bClientSimulation	true when called when bIsSprinted is replicated to non owned clients.
-	 */
 	virtual void UnADS(bool bClientSimulation = false);
 	
 #pragma endregion

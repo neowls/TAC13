@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "UI/TACUserWidget.h"
-#include "GameData/TACStruct.h"
 #include "TACScoreBoardWidget.generated.h"
 
 /**
