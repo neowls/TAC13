@@ -53,7 +53,7 @@ void UTACHUDWidget::UpdateScoreBoard()
 	ScoreBoard->UpdateScoreBoard();
 }
 
-void UTACHUDWidget::SetScoreBoardPlayer(const TArray<ATACPlayerState*>& InArray)
+void UTACHUDWidget::SetScoreBoardPlayer(const TArray<ATACPlayPlayerState*>& InArray)
 {
 	if(ScoreBoard.IsValid())
 	ScoreBoard->SetPlayerList(InArray);

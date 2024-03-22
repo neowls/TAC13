@@ -8,13 +8,13 @@
 #include "TACGameInstance.generated.h"
 
 USTRUCT(BlueprintType)
-struct FCreateServerInfo
+struct FCreateSessionInfo
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(BlueprintReadWrite)
-	FString ServerName;
+	FString SessionRoomName;
 
 	UPROPERTY(BlueprintReadWrite)
 	int32 MaxPlayers = 0;
@@ -30,7 +30,7 @@ struct FServerInfo
 
 public:
 	UPROPERTY(BlueprintReadOnly)
-	FString ServerName;
+	FString SessionName;
 
 	UPROPERTY(BlueprintReadOnly)
 	FString PlayerCountStr;
@@ -72,17 +72,23 @@ protected:
 	virtual void Init() override;
 
 	virtual void OnCreateSessionComplete(FName SessionName, bool Succeeded);
+	virtual void OnDestroySessionComplete(FName SessionName, bool Succeeded);
 	virtual void OnFindSessionsComplete(bool Succeeded);
 	virtual void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+	virtual void OnSessionParticipantChanged(FName SessionName, const FUniqueNetId& PlayerId, bool IsJoin);
+
+	
 
 	UFUNCTION(BlueprintCallable)
-	void CreateServer(FCreateServerInfo InCreateServerInfo);
+	void CreateSession(FCreateSessionInfo InCreateSessionInfo);
 
 	UFUNCTION(BlueprintCallable)
 	void JoinServer(int32 ArrayIndex);
 
 	UFUNCTION(BlueprintCallable)
 	void FindServer();
+
+	
 
 	FName CurrentSessionName;
 

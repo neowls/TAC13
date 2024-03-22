@@ -60,7 +60,7 @@ protected:
 	void ServerRPCFire(float FireStartTime);
 
 	UFUNCTION()
-	bool IsCanFire();
+	bool IsCanFire() const;
 	
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastRPCFire();

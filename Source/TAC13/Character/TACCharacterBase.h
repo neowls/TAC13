@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Game/TACPlayPlayerState.h"
 #include "GameFramework/Character.h"
 #include "Interface/TACAnimationWeaponInterface.h"
 #include "Interface/TACCharacterWidgetInterface.h"
@@ -129,7 +130,7 @@ protected:
 	TObjectPtr<UTACCharacterMovementComponent> TACCharacterMovement;
 
 	UPROPERTY()
-	class ATACPlayerState* RecentAttacker;
+	ATACPlayPlayerState* RecentAttacker;
 
 	UPROPERTY()
 	FString RecentAttackedWeaponName;

@@ -4,83 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/DataTable.h"
+#include "GameData/TACStruct.h"
 #include "TACWeapon.generated.h"
 
 class ATACCharacterBase;
-
-UENUM(BlueprintType)
-enum class EFireMode:uint8
-{
-	SINGLE,
-	BURST,
-	FULL
-};
-
-USTRUCT(BlueprintType)
-struct FTACAttachment : public FTableRowBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class UStaticMesh> Mesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
-	FString Name;
-};
-
-USTRUCT(BlueprintType)
-struct FTACWeaponStat
-{
-	GENERATED_BODY()
-
-	UPROPERTY(VisibleInstanceOnly)
-	uint8 OwnAmmo = 0;
-	
-	UPROPERTY(VisibleInstanceOnly)
-	uint8 CurrentAmmo = 0;
-	
-	UPROPERTY(VisibleInstanceOnly)
-	EFireMode CurrentFireMode = EFireMode::SINGLE;
-
-};
-
-
-USTRUCT(BlueprintType)
-struct FTACWeaponInfo : public FTableRowBase
-{
-	GENERATED_BODY()
-
-public:
-	FTACWeaponInfo() : Damage(0.0f), FireRate(0.0f), Recoil(0.0f), Ergonomics(0.0f), MaxAmmo(0) {};
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Info)
-	TObjectPtr<class USkeletalMesh> BodyMesh;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
-	TArray<EFireMode> OwnFireMode;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
-	float Damage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
-	float FireRate;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
-	float Recoil;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
-	float Ergonomics;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
-	uint8 MaxAmmo;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
-	FString Name;
-};
-
-
-
 
 UCLASS()
 class TAC13_API ATACWeapon : public AActor

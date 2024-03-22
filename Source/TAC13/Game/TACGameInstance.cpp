@@ -4,6 +4,8 @@
 #include "Game/TACGameInstance.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
+#include "TAC13.h"
+#include "GameFramework/PlayerState.h"
 
 UTACGameInstance::UTACGameInstance()
 {
@@ -13,30 +15,40 @@ UTACGameInstance::UTACGameInstance()
 void UTACGameInstance::Init()
 {
 	Super::Init();
-	if(IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get()) // 정적 선언된 온라인 서브시스템 참조
+	IOnlineIdentityPtr IdentityPtr = IOnlineSubsystem::Get()->GetIdentityInterface();
+	if(const IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get()) // 정적 선언된 온라인 서브시스템 참조
 	{
+		
 		SessionInterface = Subsystem->GetSessionInterface();
 		if(SessionInterface.IsValid())
 		{
 			//Bind Delegates
-			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UTACGameInstance::OnCreateSessionComplete); // 세션 생성 델리게이트
-			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UTACGameInstance::OnFindSessionsComplete); // 세션 검색 델리게이트
-			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UTACGameInstance::OnJoinSessionComplete); // 세션 참가 델리게이트
+			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UTACGameInstance::OnCreateSessionComplete);	// 세션 생성
+			SessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UTACGameInstance::OnFindSessionsComplete);		// 세션 검색
+			SessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UTACGameInstance::OnJoinSessionComplete);		// 세션 참가
+			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UTACGameInstance::OnDestroySessionComplete);	// 세션 나가기
+			SessionInterface->OnSessionParticipantsChangeDelegates.AddUObject(this, &UTACGameInstance::OnSessionParticipantChanged);	//	세션 참가자 변동
 		}
 	}
 	
 }
 
-void UTACGameInstance::OnCreateSessionComplete(FName SessionName, bool Succeeded) // 세션을 성공적으로 생성한다면 서버상에서 특정맵으로 이동
+void UTACGameInstance::OnCreateSessionComplete(FName SessionName, bool Succeeded)	// 세션을 성공적으로 생성한다면 서버상에서 특정맵으로 이동
 {
-	UE_LOG(LogTemp, Warning, TEXT("OnCreateSessionComplete, Succeeded : %d") , Succeeded);
-	if(Succeeded)
+	UE_LOG(LogTemp, Warning, TEXT("Session Create %s") , Succeeded ? TEXT("Succeed") : TEXT("Failed") );
+	/*if(Succeeded)
 	{
 		GetWorld()->ServerTravel("/Game/_TAC/Maps/DevLevel?listen");
-	}
+	}*/
+	
 }
 
-void UTACGameInstance::OnFindSessionsComplete(bool Succeeded) // 세션을 성공적으로 탐색했다면 해당 세션들의 정보를 가져와 이를 Broadcast 함
+void UTACGameInstance::OnDestroySessionComplete(FName SessionName, bool Succeeded)
+{
+	UE_LOG(LogTemp, Warning, TEXT("OnDestroySessionComplete, Succeeded : %d") , Succeeded);
+}
+
+void UTACGameInstance::OnFindSessionsComplete(bool Succeeded)	// 세션을 성공적으로 탐색했다면 해당 세션들의 정보를 가져와 이를 Broadcast 함
 {
 	OnSearchingServer.Broadcast(false);
 	UE_LOG(LogTemp, Warning, TEXT("OnFindSessionsComplete, Succeeded : %d") , Succeeded);
@@ -49,13 +61,14 @@ void UTACGameInstance::OnFindSessionsComplete(bool Succeeded) // 세션을 성�
 			++ArrayIndex;
 			if(!Result.IsValid()) continue;
 			FServerInfo Info;
+			
 			FString ServerName = "Empty Server Name";
 			FString HostName = "Empty Host Name";
 
-			Result.Session.SessionSettings.Get(FName("SERVER_NAME_KEY"), ServerName);
-			Result.Session.SessionSettings.Get(FName("SERVER_HOSTNAME_KEY"), HostName);
+			Result.Session.SessionSettings.Get(FName("SESSION_ROOM_NAME_KEY"), ServerName);
+			Result.Session.SessionSettings.Get(FName("SESSION_HOSTNAME_KEY"), HostName);
 			
-			Info.ServerName = ServerName;
+			Info.SessionName = ServerName;
 			Info.MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
 			Info.CurrentPlayers = Info.MaxPlayers - Result.Session.NumOpenPublicConnections;
 
@@ -72,46 +85,47 @@ void UTACGameInstance::OnFindSessionsComplete(bool Succeeded) // 세션을 성�
 	}
 }
 
-void UTACGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result) // 타겟 세션에 성공적으로 참여했을 경우 세션 맵으로 클라이언트 맵 이동
+void UTACGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)	// 타겟 세션에 성공적으로 참여했을 경우 세션 맵으로 클라이언트 맵 이동
 {
 	UE_LOG(LogTemp, Warning, TEXT("OnJoinSessionComplete, SessionName : %s"), *SessionName.ToString());
-	if(APlayerController* PC = GetFirstLocalPlayerController())
+	/*if(APlayerController* PC = GetFirstLocalPlayerController())
 	{
 		FString JoinAddress = "";
 		SessionInterface->GetResolvedConnectString(SessionName, JoinAddress);
 		if(JoinAddress != "")
 			PC->ClientTravel(JoinAddress, TRAVEL_Absolute);
+	}*/
+	if(Result == EOnJoinSessionCompleteResult::Success)
+	{
+		
 	}
 }
 
-
-void UTACGameInstance::CreateServer(FCreateServerInfo InCreateServerInfo) // 세션 생성
+void UTACGameInstance::OnSessionParticipantChanged(FName SessionName, const FUniqueNetId& PlayerId, bool IsJoin)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Player Joined"));
+}
+
+
+void UTACGameInstance::CreateSession(FCreateSessionInfo InCreateSessionInfo)	// 세션 생성
+{
+	LOG_SCREEN(0, TEXT("Created Server"));
 	UE_LOG(LogTemp, Warning, TEXT("Created Server"));
 	
 	FOnlineSessionSettings SessionSettings;
 	SessionSettings.bAllowJoinInProgress = true;		// 진행중인 세션에 참가 가능한지?
 	SessionSettings.bIsDedicated = false;				// 데디 케이트 서버인가?
-
-	
-	if(IOnlineSubsystem::Get()->GetSubsystemName() != "NULL")
-	{
-		SessionSettings.bIsLANMatch = false;	
-		SessionSettings.bUseLobbiesIfAvailable = false;
-	}
-	else
-	{
-		SessionSettings.bIsLANMatch = true;				// LAN 매치로 설정하는지?
-		SessionSettings.bUseLobbiesIfAvailable = true;	// 로비 시스템을 사용하는지?
-	}
+	SessionSettings.bIsLANMatch = InCreateSessionInfo.IsLan;
+	SessionSettings.bUseLobbiesIfAvailable = true;
 	
 	SessionSettings.bShouldAdvertise = true;			// 온라인 매치메이킹에 공개되는지?
 	SessionSettings.bUsesPresence = true;				// 참여자가 서로의 온라인 상태를 확인할 수 있는지?
-	SessionSettings.NumPublicConnections = InCreateServerInfo.MaxPlayers;
+	SessionSettings.NumPublicConnections = InCreateSessionInfo.MaxPlayers;
 	
 	
 
-	SessionSettings.Set(FName("SERVER_NAME_KEY"), InCreateServerInfo.ServerName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	SessionSettings.Set(FName("SESSION_ROOM_NAME_KEY"), InCreateSessionInfo.SessionRoomName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	SessionSettings.Set(FName("SESSION_HOSTNAME_KEY"), GetFirstLocalPlayerController()->PlayerState->GetPlayerName(), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	
 	SessionInterface->CreateSession(0, CurrentSessionName, SessionSettings);
 	
@@ -119,8 +133,9 @@ void UTACGameInstance::CreateServer(FCreateServerInfo InCreateServerInfo) // 세
 
 void UTACGameInstance::JoinServer(int32 ArrayIndex)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Join Server"));
-	//SessionInterface->JoinSession(0, CurrentSessionName, SearchResults[0]);
+	LOG_SCREEN(0, TEXT("Join Server"));
+	UE_LOG(LogTACNetwork, Warning, TEXT("Join Server"));
+	
 	FOnlineSessionSearchResult Result = SessionSearch->SearchResults[ArrayIndex];
 	if(Result.IsValid())
 	{
@@ -135,7 +150,8 @@ void UTACGameInstance::JoinServer(int32 ArrayIndex)
 
 void UTACGameInstance::FindServer() // 세션 탐색
 {
-	UE_LOG(LogTemp, Warning, TEXT("Find Server"));
+	LOG_SCREEN(0, TEXT("Find Server"));
+	UE_LOG(LogTACNetwork, Warning, TEXT("Find Server"));
 	OnSearchingServer.Broadcast(true);
 	
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
@@ -148,8 +164,8 @@ void UTACGameInstance::FindServer() // 세션 탐색
 	{
 		SessionSearch->bIsLanQuery = true; // Is Lan
 	}
+	
 	SessionSearch->MaxSearchResults = 15000;
 	SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
-	
 	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }

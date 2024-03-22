@@ -16,32 +16,5 @@ class TAC13_API ATACGameState : public AGameState
 public:
 	ATACGameState();
 
-	UPROPERTY(ReplicatedUsing=OnRep_KillLogUpdated)
-	TArray<FKillLogEntry> KillLogList;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_PlayerList)
-	TArray<class ATACPlayerState*> TACPlayerList;
-
-	UPROPERTY(Transient, BlueprintReadOnly, Category=GameState)
-	TObjectPtr<ATACGameMode> AuthTACGameMode;
-	
-	UFUNCTION()
-	void OnRep_KillLogUpdated();
-
-	UFUNCTION()
-	void OnRep_PlayerList();
-
-	UFUNCTION()
-	void AddKillLogEntry(const FString& KillerName, const FString& WeaponName ,const FString& VictimName);
-
-protected:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	virtual void BeginPlay() override;
-
-	UPROPERTY()
-	TObjectPtr<class ATACPlayerController> FirstPlayerController;
-
-
-	
 };

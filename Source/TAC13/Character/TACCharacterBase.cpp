@@ -12,6 +12,7 @@
 #include "Engine/DamageEvents.h"
 #include "Game/TACGameState.h"
 #include "Game/TACPlayerState.h"
+#include "Game/TACPlayGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Input/TACControlData.h"
@@ -88,7 +89,7 @@ float ATACCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	Stat->ApplyDamage(DamageAmount);
-	RecentAttacker = Cast<ATACPlayerState>(EventInstigator->PlayerState);
+	RecentAttacker = Cast<ATACPlayPlayerState>(EventInstigator->PlayerState);
 	RecentAttackedWeaponName = Cast<ATACWeapon>(DamageCauser)->GetWeaponName();
 	return DamageAmount;
 }
@@ -102,7 +103,7 @@ void ATACCharacterBase::Tick(float DeltaSeconds)
 void ATACCharacterBase::SetDead()
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("Character Dead"));
-	ATACGameState* AGS = GetWorld()->GetGameState<ATACGameState>();
+	ATACPlayGameState* AGS = GetWorld()->GetGameState<ATACPlayGameState>();
 	if(HasAuthority())
 	{
 		AGS->AddKillLogEntry(RecentAttacker->GetPlayerName(), RecentAttackedWeaponName, GetPlayerState()->GetPlayerName());
@@ -188,6 +189,7 @@ void ATACCharacterBase::SpawnWeapon(const FName WeaponName)
 {
 	FActorSpawnParameters Params;
 	Params.Owner = this;
+	Params.Instigator = this;
 	ATACWeapon* SpawnedWeapon = GetWorld()->SpawnActor<ATACWeapon>(WeaponToSpawn, Params);
 	SpawnedWeapon->LoadWeaponInfoData(WeaponName);
 	SpawnedWeapon->SetOwner(this);

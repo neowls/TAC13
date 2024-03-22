@@ -14,18 +14,6 @@ class TAC13_API ATACPlayerController : public APlayerController
 public:
 	ATACPlayerController();
 
-	FORCEINLINE class UTACHUDWidget* GetTACHUDWidget() { return TACHUDWidget; }
-
-	UFUNCTION(Client, Reliable)
-	void ClientUpdateKillLog(const FString& KillerName, const FString& VictimName);
-	
 protected:
-	virtual void PostInitializeComponents() override;
-	virtual void BeginPlay() override;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = HUD)
-	TSubclassOf<class UTACHUDWidget> TACHUDWidgetClass;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = HUD)
-	TObjectPtr<class UTACHUDWidget> TACHUDWidget;
 };

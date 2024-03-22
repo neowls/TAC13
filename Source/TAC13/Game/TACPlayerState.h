@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
-#include "GameData/TACStruct.h"
 #include "TACPlayerState.generated.h"
 
 /**
@@ -20,21 +19,15 @@ public:
 
 	virtual void PostInitializeComponents() override;
 
-	FORCEINLINE FPlayerScore* GetPlayerScore() { return &PlayerScore; }
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 
 	UFUNCTION()
-	void AddKillScore();
-
-	UFUNCTION()
-	void AddDeathScore();
-
-	UFUNCTION()
-	void OnRep_PlayerScore();
+	FORCEINLINE TArray<FName> GetSelectedWeapons() { return SelectedWeapons; }
 
 protected:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	UPROPERTY(Replicated)
+	TArray<FName> SelectedWeapons;
 
-	UPROPERTY(ReplicatedUsing = OnRep_PlayerScore)
-	FPlayerScore PlayerScore;
 };
 

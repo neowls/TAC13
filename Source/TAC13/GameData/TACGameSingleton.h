@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Game/TACGameMode.h"
+#include "Game/TACGameState.h"
 #include "Weapon/TACWeapon.h"
 #include "TACGameSingleton.generated.h"
 

@@ -23,7 +23,7 @@ public:
 	UFUNCTION()
 	void UpdateScoreBoard();
 	
-	void SetPlayerList(const TArray<class ATACPlayerState*>& InArray ) { CurrentPlayerList = InArray; }
+	void SetPlayerList(const TArray<class ATACPlayPlayerState*>& InArray ) { CurrentPlayerList = InArray; }
 
 protected:
 	virtual void NativeConstruct() override;
@@ -34,7 +34,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (BindWidget))
 	TWeakObjectPtr<class UVerticalBox> ScoreVerticalBox;
 
-	TArray<class ATACPlayerState*> CurrentPlayerList;
+	TArray<class ATACPlayPlayerState*> CurrentPlayerList;
 
 	UPROPERTY(VisibleAnywhere)
 	int WidgetCount = 8;

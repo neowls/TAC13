@@ -10,10 +10,9 @@
 #include "Animation/TACAnimInstance.h"
 #include "Animation/TACArmAnimInstance.h"
 #include "Camera/CameraComponent.h"
-#include "Game/TACGameMode.h"
 #include "Game/TACPlayerState.h"
+#include "Game/TACPlayGameMode.h"
 #include "GameFramework/GameStateBase.h"
-#include "Net/UnrealNetwork.h"
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "UI/TACHUDWidget.h"
@@ -85,17 +84,11 @@ void ATACCharacterPlayer::PostInitializeComponents()
 void ATACCharacterPlayer::BeginPlay()
 {
 	Super::BeginPlay();
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-	{
-		EnableInput(PlayerController);
-	}
-	
 	if(IsLocallyControlled())
 	{
 		FireMontage = FireArmMontage;
 		ChangeWeaponMontage = ChangeWeaponArmMontage.Get();
 	}
-	
 	SetCharacterControl(PlayControlData);
 	if(HasAuthority())
 	{
@@ -112,13 +105,19 @@ void ATACCharacterPlayer::Destroyed()
 	if(CurrentWeapon)
 	{
 		CurrentWeapon->Destroy();
-		for(auto iter : OwnWeapons) iter->Destroy();		
+		for(const auto iter : OwnWeapons) iter->Destroy();		
 	}
 }
 
 void ATACCharacterPlayer::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		EnableInput(PlayerController);
+	}
+	
 }
 
 void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -146,8 +145,6 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-
 }
 
 #pragma region HIT
@@ -157,7 +154,7 @@ void ATACCharacterPlayer::SetDead()
 	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	Super::SetDead();
 	if(HasAuthority())
-	Cast<ATACGameMode>(GetWorld()->GetAuthGameMode())->AddPlayerScore(RecentAttacker, Cast<ATACPlayerState>(Controller->PlayerState));
+	Cast<ATACPlayGameMode>(GetWorld()->GetAuthGameMode())->AddPlayerScore(RecentAttacker, Cast<ATACPlayPlayerState>(Controller->PlayerState));
 	
 	SetCharacterControl(SpectateControlData);
 	GetCapsuleComponent()->SetCollisionProfileName(TEXT("DeadPawn"));
@@ -166,7 +163,6 @@ void ATACCharacterPlayer::SetDead()
 	GetMesh()->SetOwnerNoSee(false);
 	ArmMesh->SetOwnerNoSee(true);
 	CurrentWeapon->SetActorHiddenInGame(true);
-	
 	GetWorldTimerManager().SetTimer(RespawnTimer, this, &ATACCharacterPlayer::RespawnCharacter, RespawnDelayTime, false);
 	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
 }
@@ -181,7 +177,7 @@ void ATACCharacterPlayer::RespawnCharacter()
 	if(HasAuthority())
 	{
 		Stat->SetHP(100);
-		for(auto iter : OwnWeapons)
+		for(const auto iter : OwnWeapons)
 		{
 			iter->InitWeaponStat();
 		}
@@ -226,8 +222,7 @@ void ATACCharacterPlayer::SetCharacterControl(TObjectPtr<UTACControlData> InChar
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 	{
 		Subsystem->ClearAllMappings();
-		const UInputMappingContext* NewMappingContext = CurrentControlData->InputMappingContext;
-		if (NewMappingContext)
+		if (const UInputMappingContext* NewMappingContext = CurrentControlData->InputMappingContext)
 		{
 			Subsystem->AddMappingContext(NewMappingContext, 0);
 		}
@@ -263,7 +258,7 @@ void ATACCharacterPlayer::ResetFire()
 	bCanFire = true;
 }
 
-bool ATACCharacterPlayer::IsCanFire()
+bool ATACCharacterPlayer::IsCanFire() const
 {
 	if(bIsSprinting || CurrentWeapon->GetWeaponStat().CurrentAmmo <= 0) return false;
 	return true;
@@ -297,8 +292,8 @@ void ATACCharacterPlayer::FireHitCheck()
 
 void ATACCharacterPlayer::SetRecoilPoint()
 {
-	//Camera->AddLocalRotation(FRotator(0.5f,0.f,0.f));
-	//AddControllerPitchInput(0.1f);
+	// Camera->AddLocalRotation(FRotator(0.5f,0.f,0.f));
+	// AddControllerPitchInput(0.1f);
 	// FRotator temp = GetControlRotation();
 	// temp.Pitch += 1.0f;
 	// Controller->SetControlRotation(temp);
@@ -356,7 +351,7 @@ void ATACCharacterPlayer::Move(const FInputActionValue& Value)
 
 void ATACCharacterPlayer::Look(const FInputActionValue& Value)
 {
-	FVector2D LookAxisVector = Value.Get<FVector2D>();
+	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 
 	AddControllerYawInput(LookAxisVector.X);
 	AddControllerPitchInput(LookAxisVector.Y);

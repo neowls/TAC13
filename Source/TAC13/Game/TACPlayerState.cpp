@@ -7,9 +7,7 @@
 
 ATACPlayerState::ATACPlayerState()
 {
-	PlayerScore.PlayerName = "Player";
-	PlayerScore.KillScore = 0;
-	PlayerScore.DeathScore = 0;
+
 }
 
 void ATACPlayerState::PostInitializeComponents()
@@ -20,32 +18,7 @@ void ATACPlayerState::PostInitializeComponents()
 void ATACPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ATACPlayerState, PlayerScore);
-	
-}
-
-void ATACPlayerState::OnRep_PlayerScore()
-{
-	TAC_LOG(LogTACNetwork, Log, TEXT("Kill Score : %d"), PlayerScore.KillScore);
-	TAC_LOG(LogTACNetwork, Log, TEXT("Death Score : %d"), PlayerScore.DeathScore);
-}
-
-void ATACPlayerState::AddKillScore()
-{
-	if(GetLocalRole() == ROLE_Authority)
-	{
-		PlayerScore.KillScore++;
-		OnRep_PlayerScore();
-	}
-}
-
-void ATACPlayerState::AddDeathScore()
-{
-	if(GetLocalRole() == ROLE_Authority)
-	{
-		PlayerScore.DeathScore++;
-		OnRep_PlayerScore();
-	}
+	DOREPLIFETIME(ATACPlayerState, SelectedWeapons);
 }
 
 

@@ -24,7 +24,7 @@ public:
 	void UpdateHPBar(uint8 NewCurrentHP);
 	void UpdateKillLog(FString InAttacker, FString InWeaponName, FString InVictim);
 	void UpdateScoreBoard();
-	void SetScoreBoardPlayer(const TArray<class ATACPlayerState*>& InArray);
+	void SetScoreBoardPlayer(const TArray<class ATACPlayPlayerState*>& InArray);
 	void ScoreBoardOnOff(uint8 bIsScoreBoardOn);
 
 	FORCEINLINE class UTACScoreBoardWidget* GetScoreBoardWidget() const { return ScoreBoard.Get(); }
