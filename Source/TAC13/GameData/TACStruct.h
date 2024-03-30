@@ -107,3 +107,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Info)
 	FString Name;
 };
+
+USTRUCT(BlueprintType)
+struct FLobbyPlayerInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bReadyState = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString PlayerName;
+	
+};

@@ -13,7 +13,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnOwnAmmoChangedDelegate, uint8 /*OwnAmmo*/
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponNameChangedDelegate, FString /*WeaponName*/);
 
 template<typename T>
-void InitializeObjectFinder(TObjectPtr<T>& Ref, const FString& Path)
+static void InitializeObjectFinder(TObjectPtr<T>& Ref, const FString& Path)
 {
 	ConstructorHelpers::FObjectFinder<T> Finder(*Path);
 	if (Finder.Succeeded()) {

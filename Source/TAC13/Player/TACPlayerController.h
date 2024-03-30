@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "TACPlayerController.generated.h"
 
+class UTACUserWidget;
+
 UCLASS()
 class TAC13_API ATACPlayerController : public APlayerController
 {
@@ -15,5 +17,15 @@ public:
 	ATACPlayerController();
 
 protected:
-	
+	virtual void BeginPlay() override;
+
+	virtual void PostInitializeComponents() override;
+
+	virtual void SetUIWidget();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = HUD)
+	TSubclassOf<class UTACUserWidget> UIWidgetClass;
+
+	TObjectPtr<class UTACUserWidget> UIWidget;
+
 };
