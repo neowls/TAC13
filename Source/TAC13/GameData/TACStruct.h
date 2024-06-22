@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+//#include "Weapon/TACWeapon.h"
 #include "TACStruct.generated.h"
 
 
@@ -108,15 +109,20 @@ public:
 	FString Name;
 };
 
-USTRUCT(BlueprintType)
-struct FLobbyPlayerInfo
+
+USTRUCT()
+struct FLoadOut
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bReadyState = false;
+public:
+	UPROPERTY()
+	TObjectPtr<class ATACWeapon> PrimaryWeapon;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString PlayerName;
+	UPROPERTY()
+	TObjectPtr<class ATACWeapon> SecondaryWeapon;
+
+	UPROPERTY()
+	FString ArmorType;
 	
 };

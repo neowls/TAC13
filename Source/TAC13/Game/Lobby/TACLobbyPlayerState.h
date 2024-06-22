@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Game/TACPlayerState.h"
-#include "GameData/TACStruct.h"
 #include "TACLobbyPlayerState.generated.h"
+
+
 
 /**
  * 
@@ -18,18 +19,22 @@ class TAC13_API ATACLobbyPlayerState : public ATACPlayerState
 public:
 	ATACLobbyPlayerState();
 
-	FORCEINLINE bool GetIsReady() const { return PlayerInfo.bReadyState; }
-	FORCEINLINE void SetIsReady(const bool bNewReadyState) { PlayerInfo.bReadyState = bNewReadyState; }
-	FORCEINLINE FLobbyPlayerInfo GetPlayerInfo()  { return PlayerInfo; }
+	FORCEINLINE bool GetIsReady() const { return bReadyState; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetReadyStatus();
+
 	
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	virtual void PostInitializeComponents() override;
+
 	virtual void BeginPlay() override;
 
-	UPROPERTY(ReplicatedUsing = OnRep_PlayerInfo)
-	FLobbyPlayerInfo PlayerInfo;
+	virtual void Destroyed() override;
+
+	UPROPERTY(Replicated)
+	uint8 bReadyState : 1;
 	
-	UFUNCTION()
-	void OnRep_PlayerInfo();
 };

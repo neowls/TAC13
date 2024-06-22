@@ -82,6 +82,9 @@ public:
 
 	FORCEINLINE FName GetSessionName() const { return SessionNameKey; }
 	FString GetSessionName(const FOnlineSessionSearchResult& SearchResult) const;
+
+	UFUNCTION(BlueprintCallable)
+	void StartGameSession();
 	
 protected:
 
@@ -114,8 +117,9 @@ private:
 	FOnLobbySessionJoinDelegate OnLobbySessionJoined;
 	
 	bool bCreateSessionOnDestroy { false };
-	const FName SessionNameKey { "SessionNameKey" };
+	const FName SessionNameKey { "TAC13Session" };
 	
 	FString LobbyLevelPath { "/Game/_TAC/Menu/Lobby"};
 	FString MenuLevelPath { "/Game/_TAC/Menu/Menu"};
+	FString GameLevelPath { "/Game/_TAC/Maps/PlayMap_Wood"};
 };

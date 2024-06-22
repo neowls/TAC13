@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+//
 
 #include "Player/TACPlayerController.h"
 #include "UI/TACUserWidget.h"
@@ -17,22 +16,34 @@ ATACPlayerController::ATACPlayerController()
 void ATACPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	SetUIWidget();
+	BeforeSetUI();
+	if(IsLocalController())
+	{
+		const FInputModeUIOnly UIOnlyInputMode;
+		SetInputMode(UIOnlyInputMode);
+		SetShowMouseCursor(true);
+		SetUIWidget();		
+	}
+}
+
+void ATACPlayerController::BeforeSetUI()
+{
+	
 }
 
 void ATACPlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-	const FInputModeUIOnly UIOnlyInputMode;
-	SetInputMode(UIOnlyInputMode);
-	SetShowMouseCursor(true);
 }
 
 void ATACPlayerController::SetUIWidget()
 {
-	if(IsLocalPlayerController())
-	{
-		UIWidget = CreateWidget<UTACUserWidget>(this, UIWidgetClass);
-		UIWidget->AddToViewport();
-	}
+	UIWidget = CreateWidget<UTACUserWidget>(this, UIWidgetClass);
+	UIWidget->AddToViewport();
+}
+
+void ATACPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
 }

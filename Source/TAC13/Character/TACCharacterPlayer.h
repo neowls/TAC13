@@ -3,12 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Character/TACCharacterBase.h"
 #include "InputActionValue.h"
+#include "Character/TACCharacterBase.h"
 #include "Interface/TACCharacterHUDInterface.h"
-#include "Interfaces/OnlineSessionInterface.h"
 #include "TACCharacterPlayer.generated.h"
 
+class ATACPlayPlayerController;
 class ATACPlayerState;
 class UTACAnimInstance;
 
@@ -17,7 +17,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnScoreboardChangedDelegate, uint8 /*bIsSco
 
 
 UCLASS()
-class TAC13_API ATACCharacterPlayer : public ATACCharacterBase, public ITACCharacterHUDInterface
+class TAC13_API ATACCharacterPlayer : public ATACCharacterBase
 {
 	GENERATED_BODY()
 	
@@ -25,29 +25,31 @@ public:
 	ATACCharacterPlayer(const FObjectInitializer& ObjectInitializer);
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-
+	
 protected:
 	virtual void PostInitializeComponents() override;
 	
 	virtual void BeginPlay() override;
-
-	virtual void Destroyed() override;
 	
-	virtual void PossessedBy(AController* NewController) override;
+	virtual void Destroyed() override;
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	virtual void SetDead() override;
+	UFUNCTION()
+	void InitLocalRoleProperty();
 
+
+#pragma region HIT
+	
+	virtual void SetDead() override;
+	
 	virtual void RespawnCharacter() override;
 	
 	FTimerHandle RespawnTimer;
 
 	float RespawnDelayTime = 3.0f;
 
-	FOnScoreboardChangedDelegate OnScoreboardChanged;
-
-	IOnlineSessionPtr OnlineSessionInterface;
+#pragma endregion 
 
 #pragma region FIRE
 
@@ -82,7 +84,6 @@ protected:
 	float AcceptMinCheckTime = 0.1f;
 
 #pragma endregion 
-
 	
 #pragma region INPUT
 protected:
@@ -149,7 +150,11 @@ protected:
 	virtual void SetCharacterControlData(const UTACControlData* CharacterControlData) override;
 #pragma endregion
 
+#pragma region WIDGET	
 protected:
-	virtual void SetupHUDWidget(class UTACHUDWidget* InHUDWidget) override;
+	FOnScoreboardChangedDelegate OnScoreboardChanged;
 
+	virtual void SetupHUDWidget();
+
+#pragma endregion
 };

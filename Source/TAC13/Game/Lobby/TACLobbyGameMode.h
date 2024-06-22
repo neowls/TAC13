@@ -3,7 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TACGameMode.h"
+#include "Game/TACGameMode.h"
+#include "TACLobbyGameState.h"
 #include "TACLobbyGameMode.generated.h"
 
 
@@ -18,13 +19,14 @@ class TAC13_API ATACLobbyGameMode : public ATACGameMode
 
 public:
 	ATACLobbyGameMode();
-
+		
 protected:
-
+	virtual void BeginPlay() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
 	virtual void InitGameState() override;
 
 	UPROPERTY(Transient)
 	TObjectPtr<class ATACLobbyGameState> TACLobbyGameState;
-	
+
 };

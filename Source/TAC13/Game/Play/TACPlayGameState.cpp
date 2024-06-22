@@ -1,8 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Game/TACPlayGameState.h"
+#include "TACPlayGameState.h"
 #include "Net/UnrealNetwork.h"
+#include "GameData/TACStruct.h"
 #include "Player/TACPlayPlayerController.h"
 #include "UI/TACHUDWidget.h"
 

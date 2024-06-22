@@ -70,10 +70,4 @@ void UTACHUDWidget::ScoreBoardOnOff(uint8 bIsScoreBoardOn)
 void UTACHUDWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
-	ITACCharacterHUDInterface* HUDPawn = Cast<ITACCharacterHUDInterface>(GetOwningPlayerPawn());
-	if(HUDPawn)
-	{
-		HUDPawn->SetupHUDWidget(this);
-	}
 }

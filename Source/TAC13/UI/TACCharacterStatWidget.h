@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "TACUserWidget.h"
 #include "TACCharacterStatWidget.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TAC13_API UTACCharacterStatWidget : public UUserWidget
+class TAC13_API UTACCharacterStatWidget : public UTACUserWidget
 {
 	GENERATED_BODY()
 	

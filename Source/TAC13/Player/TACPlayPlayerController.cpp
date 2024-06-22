@@ -1,8 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+//
 
 #include "TACPlayPlayerController.h"
+
+#include "TAC13.h"
 #include "UI/TACHUDWidget.h"
+#include "UI/TACUserWidget.h"
 
 ATACPlayPlayerController::ATACPlayPlayerController()
 {
@@ -15,22 +17,58 @@ ATACPlayPlayerController::ATACPlayPlayerController()
 
 void ATACPlayPlayerController::PostInitializeComponents()
 {
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
 	Super::PostInitializeComponents();
-	const FInputModeGameOnly GameOnlyInputMode;
-	SetInputMode(GameOnlyInputMode);
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
 }
 
 void ATACPlayPlayerController::BeginPlay()
 {
-	Super::BeginPlay();
-
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+	Super::BeginPlay();;
+	
+	if(IsLocalController())
+	{
+		const FInputModeGameOnly GameOnlyInputMode;
+		SetInputMode(GameOnlyInputMode);
+		SetShowMouseCursor(false);
+	}
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+	
 }
 
 void ATACPlayPlayerController::SetUIWidget()
 {
-	if(IsLocalPlayerController())
-	{
-		TACHUDWidget = CreateWidget<UTACHUDWidget>(this, TACHUDWidgetClass);
-		TACHUDWidget->AddToViewport();
-	}
+	
+}
+
+void ATACPlayPlayerController::SetHUDWidget()
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+	TACHUDWidget = CreateWidget<UTACHUDWidget>(this, TACHUDWidgetClass);
+	TACHUDWidget->AddToViewport();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+}
+
+void ATACPlayPlayerController::OnPossess(APawn* InPawn)
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+	if(IsLocalController() && !TACHUDWidget) SetHUDWidget();
+	Super::OnPossess(InPawn);
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+}
+
+void ATACPlayPlayerController::PostNetInit()
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+	Super::PostNetInit();
+	if(IsLocalController() && !TACHUDWidget) SetHUDWidget();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+}
+
+void ATACPlayPlayerController::OnRep_Owner()
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
+	Super::OnRep_Owner();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End | %s"), IsLocalController() ? TEXT("Local") : TEXT("Remote"));
 }

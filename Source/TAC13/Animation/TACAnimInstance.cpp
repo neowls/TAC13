@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "TACAnimInstance.h"
+
+#include "TAC13.h"
 #include "Character/TACCharacterPlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -48,7 +50,6 @@ void UTACAnimInstance::UpdateCharacterStateData()
 	bIsSprint = Owner->bIsSprinting;
 	bIsJumping = false;
 	bIsFalling = false;
-	//bHoldWeapon = Owner
 	if(Owner->GetCharacterMovement()->MovementMode == MOVE_Falling)
 	{
 		if(WorldVelocity.Z > 0.f) bIsJumping = true;

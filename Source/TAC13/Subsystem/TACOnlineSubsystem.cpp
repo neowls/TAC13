@@ -9,20 +9,20 @@
 
 UTACOnlineSubsystem::UTACOnlineSubsystem()
 {
-	
+	OnlineSubsystem = nullptr;
 }
 
 FString UTACOnlineSubsystem::GetSessionName(const FOnlineSessionSearchResult& SearchResult) const
 {
 	FString outVal = {"Name None"};
-	SearchResult.Session.SessionSettings.Get(SessionNameKey, outVal);
+	SearchResult.Session.SessionSettings.Get(NAME_GameSession, outVal);
 	return outVal;
 }
 
 void UTACOnlineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	   
+	
 	OnlineSubsystem = IOnlineSubsystem::Get(); // 정적 선언된 온라인 서브시스템 참조
 	SessionInterface = OnlineSubsystem->GetSessionInterface(); // 세션 인터페이스 캐싱
 	if(SessionInterface.IsValid())
@@ -35,6 +35,10 @@ void UTACOnlineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &ThisClass::OnDestroySessionComplete);			// 세션 나가기
 		SessionInterface->OnSessionParticipantsChangeDelegates.AddUObject(this, &ThisClass::OnSessionParticipantChanged);	// 세션 참가자 변동
 	}
+	LOG_SCREEN(0, TEXT("Subsystem Name : %s"), *IOnlineSubsystem::Get()->GetSubsystemName().ToString());
+	
+	UE_LOG(LogTACNetwork, Warning,  TEXT("SessionState Name : %d"), SessionInterface->GetSessionState(NAME_GameSession));
+	LOG_SCREEN(1, TEXT("SessionState Name : %d"), SessionInterface->GetSessionState(NAME_GameSession));
 }
 
 void UTACOnlineSubsystem::OnSessionParticipantChanged(FName SessionName, const FUniqueNetId& PlayerId, bool IsJoin)
@@ -42,13 +46,22 @@ void UTACOnlineSubsystem::OnSessionParticipantChanged(FName SessionName, const F
 	UE_LOG(LogTACNetwork, Warning, TEXT("Player Id : %s"), *PlayerId.ToString());
 }
 
+void UTACOnlineSubsystem::StartGameSession()
+{
+	GetWorld()->ServerTravel(GameLevelPath + "?listen", false);
+	SessionInterface->StartSession(NAME_GameSession);
+}
+
 void UTACOnlineSubsystem::CreateSession(FCreateSessionInfo InCreateSessionInfo)	// 세션 생성
 {
 	UE_LOG(LogTACNetwork, Warning, TEXT("Create Session"));
-	LOG_SCREEN(0, TEXT("Create Session"));
+	LOG_SCREEN(2, TEXT("Create Session"));
 	
+	UE_LOG(LogTACNetwork, Warning,  TEXT("SessionState Name : %d"), SessionInterface->GetSessionState(NAME_GameSession));
+	LOG_SCREEN(3, TEXT("SessionState Name : %d"), SessionInterface->GetSessionState(NAME_GameSession));
+
+
 	if(!SessionInterface.IsValid()) return;
-	
 	if (SessionInterface->GetSessionState(NAME_GameSession) != EOnlineSessionState::NoSession)	// 동일한 세션이 있다면 해당 세션을 삭제한다.
 	{
 		bCreateSessionOnDestroy = true;
@@ -63,9 +76,11 @@ void UTACOnlineSubsystem::CreateSession(FCreateSessionInfo InCreateSessionInfo)	
 	SessionSettings->bUseLobbiesIfAvailable = true;		// 로비 기능을 사용할 것인가?
 	SessionSettings->bShouldAdvertise		= true;		// 온라인 매치메이킹에 공개되는지?
 	SessionSettings->bUsesPresence			= true;		// 참여자가 서로의 온라인 상태를 확인할 수 있는지?
+	SessionSettings->bIsDedicated			= false;
 	SessionSettings->bIsLANMatch			= InCreateSessionInfo.IsLan && IOnlineSubsystem::Get()->GetSubsystemName() == "NULL";	// Lan 매치인가?
+	UE_LOG(LogTemp, Warning, TEXT("Subsystem Name : %s"), *IOnlineSubsystem::Get()->GetSubsystemName().ToString());
 	SessionSettings->NumPublicConnections	= InCreateSessionInfo.MaxPlayers;	//최대 가용 인원
-	SessionSettings->BuildUniqueId			= 1;		// 검색 중에 다른 빌드가 서로 보이지 않도록 하는데 사용된다.
+	SessionSettings->BuildUniqueId			= 4;		// 검색 중에 다른 빌드가 서로 보이지 않도록 하는데 사용된다.
 	
 	// 클라이언트에게 임의의 데이터를 생성하고 전달할 수 있게 설정한다.
 	SessionSettings->Set(FName("SESSION_ROOM_NAME_KEY"), InCreateSessionInfo.RoomName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
@@ -75,19 +90,19 @@ void UTACOnlineSubsystem::CreateSession(FCreateSessionInfo InCreateSessionInfo)	
 	if (!SessionInterface->CreateSession(0, NAME_GameSession, *SessionSettings))
 	{
 		UE_LOG(LogTACNetwork, Warning, TEXT("Failed to Create Session"));
-		LOG_SCREEN(0, TEXT("Failed to Create Session"));
+		LOG_SCREEN(5, TEXT("Failed to Create Session"));
 	}
 }
 
 void UTACOnlineSubsystem::FindSession() // 세션 탐색
 {
-	LOG_SCREEN(0, TEXT("Find Session"));
+	LOG_SCREEN(2, TEXT("Find Session"));
 	UE_LOG(LogTACNetwork, Warning, TEXT("Find Session"));
 	
 	OnSearchingServer.Broadcast(true);
 	SessionSearch = MakeShareable(new FOnlineSessionSearch);
 	
-	LOG_SCREEN(1, TEXT("Subsystem Name : %s"), *IOnlineSubsystem::Get()->GetSubsystemName().ToString());
+	LOG_SCREEN(3, TEXT("Subsystem Name : %s"), *IOnlineSubsystem::Get()->GetSubsystemName().ToString());
 	if(IOnlineSubsystem::Get()->GetSubsystemName() != "NULL")
 	{
 		SessionSearch->bIsLanQuery = false;		
@@ -96,8 +111,8 @@ void UTACOnlineSubsystem::FindSession() // 세션 탐색
 	{
 		SessionSearch->bIsLanQuery = true; // Is Lan
 	}
-	SessionSearch->MaxSearchResults = 15000;
-	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	SessionSearch->MaxSearchResults = 100000;
+	SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 	
 	SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
@@ -121,22 +136,23 @@ void UTACOnlineSubsystem::JoinIndexSession(int32 ArrayIndex)
 
 void UTACOnlineSubsystem::DestroySession()
 {
+	if(SessionInterface->GetSessionState(NAME_GameSession) == EOnlineSessionState::NoSession) return;
 	if(SessionInterface->DestroySession(NAME_GameSession))
 	{
 		UE_LOG(LogTACNetwork, Warning, TEXT("Destroy Session Success"));
-		LOG_SCREEN(0, TEXT("Destroy Session Success"));
+		LOG_SCREEN(7, TEXT("Destroy Session Success"));
 	}
 	else
 	{
 		UE_LOG(LogTACNetwork, Warning, TEXT("Destroy Session Failed"));
-		LOG_SCREEN(0, TEXT("Destroy Session Failed"));
+		LOG_SCREEN(8, TEXT("Destroy Session Failed"));
 	}
 }
 
 void UTACOnlineSubsystem::OnCreateSessionComplete(FName SessionName, bool Succeeded)	// 세션을 성공적으로 생성한다면 서버상에서 특정맵으로 이동
 {
 	UE_LOG(LogTACNetwork, Warning, TEXT("Create Session %s") , Succeeded ? TEXT("Succeed") : TEXT("Failed"));
-	LOG_SCREEN(0, TEXT("Create Session Complete"));
+	LOG_SCREEN(6, TEXT("Create Session Complete"));
 	if(Succeeded)
 	{
 		OnLobbySessionJoined.Broadcast(GetWorld()->ServerTravel(LobbyLevelPath + "?listen", true));

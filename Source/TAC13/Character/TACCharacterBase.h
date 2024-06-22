@@ -1,10 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Game/TACPlayPlayerState.h"
+#include "Game/Play/TACPlayPlayerState.h"
 #include "GameFramework/Character.h"
 #include "Interface/TACAnimationWeaponInterface.h"
-#include "Interface/TACCharacterWidgetInterface.h"
 #include "Weapon/TACWeapon.h"
 #include "TACCharacterBase.generated.h"
 
@@ -22,7 +21,7 @@ static void InitializeObjectFinder(TObjectPtr<T>& Ref, const FString& Path)
 }
 
 UCLASS()
-class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeaponInterface, public ITACCharacterWidgetInterface
+class TAC13_API ATACCharacterBase : public ACharacter, public ITACAnimationWeaponInterface
 {
 	GENERATED_BODY()
 
@@ -73,10 +72,18 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual void PostInitializeComponents() override;
+	
+	virtual void OnRep_PlayerState() override;
+
+	virtual void PostNetInit() override;
+
+	virtual void PossessedBy(AController* NewController) override;
+
+	virtual void BeginPlay() override;
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-	virtual void Tick(float DeltaSeconds) override;
+	virtual void Destroyed() override;
 
 	
 	virtual void SetDead();
@@ -84,9 +91,6 @@ protected:
 	virtual void RespawnCharacter();
 	
 	virtual void FireHitCheck() override;
-	
-	virtual void SetupCharacterWidget(UTACUserWidget* InUserWidget) override;
-	
 	
 	// Control Section
     virtual void SetCharacterControlData(const class UTACControlData* CharacterControlData);
@@ -141,73 +145,73 @@ protected:
 #pragma region WEAPON
 
 public:
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, ReplicatedUsing = OnRep_OwnWeapons, Category = Weapon)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, ReplicatedUsing=OnRep_OwnWeapons, Category = Weapon)
 	TArray<TObjectPtr<ATACWeapon>> OwnWeapons;
-
-	UPROPERTY(VisibleInstanceOnly, Category = Weapon)
-	TObjectPtr<ATACWeapon> CurrentWeapon;
 
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TSubclassOf<ATACWeapon> WeaponToSpawn;
+	
+	FORCEINLINE TObjectPtr<ATACWeapon> GetCurrentWeapon() const { return OwnWeapons[CurrentWeaponIndex]; }
 
-	TObjectPtr<UStaticMeshComponent> GetCurrentSight() const { return CurrentWeapon ? CurrentWeapon->GetSightMesh() : nullptr; }
+	TObjectPtr<UStaticMeshComponent> GetCurrentSight() const { return GetCurrentWeapon() ? GetCurrentWeapon()->GetSightMesh() : nullptr; }
 	
 	UFUNCTION(BlueprintPure)
-	FORCEINLINE FTransform GetLeftHandTransform() const { return CurrentWeapon->GetMesh()->GetSocketTransform(FName("S_Left_Hand")); }
+	FORCEINLINE FTransform GetLeftHandTransform() const { return GetCurrentWeapon()->GetMesh()->GetSocketTransform(FName("S_Left_Hand")); }
 	
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	void SpawnWeapon(FName WeaponName);
+
+	UFUNCTION()
+	void InitAttachWeapons();
 
 	UFUNCTION()
 	void ReloadingWeapon();
 
 protected:
 	
-	UPROPERTY(VisibleInstanceOnly, ReplicatedUsing = OnRep_CurrentWeaponIndex , Category = Weapon)
-	uint8 CurrentWeaponIndex;
+	UPROPERTY(VisibleInstanceOnly, ReplicatedUsing=OnRep_CurrentWeaponIndex, Category = Weapon)
+	uint8 CurrentWeaponIndex = 0;
+
+	UPROPERTY()
+	uint8 PreviousWeaponIndex = 0;
 	
 	UFUNCTION()
 	void ChangeWeapon(const int8& ChangeValue);
-
-	UFUNCTION(Server, Reliable)
-	void ServerChangeWeapon(const uint8 Index);
-
-	UFUNCTION(Server, Reliable)
-	void ServerReloadWeapon();
 	
-	UFUNCTION()
-	void OnRep_OwnWeapons();
+	UFUNCTION(Server, Reliable)
+	void Server_ReloadWeapon();
 
 	UFUNCTION()
 	void OnRep_CurrentWeaponIndex();
+
+	UFUNCTION()
+	void OnRep_OwnWeapons();
 	
 	UFUNCTION()
-	void AttachWeapon(ATACWeapon* TargetWeapon);
+	void AttachWeapon(ATACWeapon* TargetWeapon) const;
 
 	UFUNCTION()
 	void DropWeapon();
 
 	UFUNCTION()
-	void ApplyWeaponChange(const uint8 NewWeaponIndex);
-
-	UFUNCTION()
 	void CurrentWeaponCosmetic();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SetWeaponIndex(const uint8 NewWeaponIndex);
 
 	UFUNCTION()
-	virtual void ChangeWeaponCheck() override;
+	void EquipWeapon(const uint8 NewWeaponIndex);
+	
 
 	//Fire Section
+
+	float FireTime() const { return GetCurrentWeapon() ?  60 / GetCurrentWeapon()->GetWeaponInfo().FireRate : 0.1f;  }
 	
-	float FireTime = 0.1f;
-	
-	UPROPERTY(ReplicatedUsing = OnRep_CanFire)
+	UPROPERTY(Replicated)
 	uint8 bCanFire : 1;
 
 	UFUNCTION()
 	virtual void ChangeFireMode();
-
-	UFUNCTION()
-	void OnRep_CanFire();
 
 #pragma endregion 
 	

@@ -4,7 +4,7 @@
 #include "UI/TACScoreBoardWidget.h"
 #include "TACScoreWidget.h"
 #include "Components/VerticalBox.h"
-#include "Game/TACPlayPlayerState.h"
+#include "Game/Play/TACPlayPlayerState.h"
 
 UTACScoreBoardWidget::UTACScoreBoardWidget(const FObjectInitializer& ObjectInitializer)
 {

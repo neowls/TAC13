@@ -22,6 +22,9 @@ public:
 
 	class ATACPlayGameState* GetTACGameState() const { return TACPlayGameState; }
 
+	UFUNCTION(BlueprintCallable, Category="Respawn")
+	void RespawnPlayer(AController* PlayerController);
+
 protected:
 	virtual void StartPlay() override;
 
@@ -30,6 +33,8 @@ protected:
 	virtual void PostInitializeComponents() override;
 	
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 	UPROPERTY(Transient)
 	TObjectPtr<ATACPlayGameState> TACPlayGameState;

@@ -1,9 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+//
 
 #include "Player/TACLobbyPlayerController.h"
-#include "Game/TACLobbyGameMode.h"
-#include "Game/TACLobbyPlayerState.h"
+#include "TAC13.h"
+#include "Game/Lobby/TACLobbyGameState.h"
+#include "Game/Lobby/TACLobbyPlayerState.h"
+#include "UI/TACLobbyWidget.h"
 #include "UI/TACUserWidget.h"
 
 ATACLobbyPlayerController::ATACLobbyPlayerController(const FObjectInitializer& ObjectInitializer)
@@ -16,65 +17,45 @@ ATACLobbyPlayerController::ATACLobbyPlayerController(const FObjectInitializer& O
 	bAutoManageActiveCameraTarget = false;
 }
 
-void ATACLobbyPlayerController::BeginPlay()
+void ATACLobbyPlayerController::PostInitializeComponents()
 {
-	Super::BeginPlay();
-	LobbyPlayerState = Cast<ATACLobbyPlayerState>(PlayerState);
-	
-	FTimerHandle RequestServerPlayerListUpdateHandle;
-	GetWorldTimerManager().SetTimer(RequestServerPlayerListUpdateHandle, this , &ATACLobbyPlayerController::RequestServerPlayerListUpdate, 0.05f, false);
+	Super::PostInitializeComponents();
+	LobbyGameState = GetWorld()->GetGameState<ATACLobbyGameState>();
 }
 
+void ATACLobbyPlayerController::BeforeSetUI()
+{
+	Super::BeforeSetUI();
+	LobbyGameState = GetWorld()->GetGameState<ATACLobbyGameState>();
+}
 
 void ATACLobbyPlayerController::SetUIWidget()
 {
-	if(IsLocalPlayerController())
-	{
-		LobbyWidget = CreateWidget<UTACUserWidget>(this, UIWidgetClass);
-		LobbyWidget->AddToViewport();
-	}
+	Super::SetUIWidget();
+	LobbyWidget = Cast<UTACLobbyWidget>(UIWidget);
+	LobbyGameState->OnUpdatePlayerList.AddUObject(LobbyWidget, &UTACLobbyWidget::UpdatePlayerInfo);
+	LobbyWidget->OnChangeReadyStateDelegate.AddDynamic(this, &ThisClass::Server_ChangePlayerReadyState);
+	if(HasAuthority()) LobbyWidget->bIsHost = true;
+	LobbyGameState->UpdatePlayerList();
 }
 
-
-void ATACLobbyPlayerController::RequestServerPlayerListUpdate()
+void ATACLobbyPlayerController::ReceivedPlayer()
 {
-	if(HasAuthority())
-	{
-		ATACLobbyGameMode* GM = Cast<ATACLobbyGameMode>(GetWorld()->GetAuthGameMode());
-	}
-	
-	else
-	{
-		ServerRequestServerPlayerListUpdate();
-	}
+	Super::ReceivedPlayer();
 }
 
-void ATACLobbyPlayerController::SetIsReadyState(bool NewReadyState)
+void ATACLobbyPlayerController::RequestUpdatePlayerInfo()
 {
-	if(HasAuthority())
-	{
-		if(LobbyPlayerState)
-			LobbyPlayerState->SetIsReady(NewReadyState);
-		RequestServerPlayerListUpdate();
-	}
-	else
-	{
-		ServerSetIsReadyState(NewReadyState);
-	}
+	if(IsLocalPlayerController()) Server_RequestUpdatePlayerList();
 }
 
-void ATACLobbyPlayerController::ServerSetIsReadyState_Implementation(bool NewReadyState)
+void ATACLobbyPlayerController::Server_RequestUpdatePlayerList_Implementation()
 {
-	SetIsReadyState(NewReadyState);
+	if(LobbyGameState) LobbyGameState->Multicast_SendUpdatePlayerList();
 }
 
-void ATACLobbyPlayerController::ServerRequestServerPlayerListUpdate_Implementation()
+void ATACLobbyPlayerController::Server_ChangePlayerReadyState_Implementation()
 {
-	RequestServerPlayerListUpdate();
+	GetPlayerState<ATACLobbyPlayerState>()->SetReadyStatus();
 }
 
-void ATACLobbyPlayerController::ClientUpdatePlayerList_Implementation(const TArray<FLobbyPlayerInfo>& PlayerInfos)
-{
-	if(!PlayerInfos.IsEmpty())
-	OnUpdatePlayerList.Broadcast(PlayerInfos);
-}

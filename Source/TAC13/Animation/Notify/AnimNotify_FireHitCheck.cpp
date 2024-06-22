@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Animation/AnimNotify_FireHitCheck.h"
+#include "Animation/Notify/AnimNotify_FireHitCheck.h"
 #include "Interface/TACAnimationWeaponInterface.h"
 
 void UAnimNotify_FireHitCheck::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)

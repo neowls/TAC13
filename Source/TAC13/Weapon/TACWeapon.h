@@ -41,7 +41,9 @@ protected:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	
+	virtual void PostInitializeComponents() override;
+
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	TObjectPtr<USceneComponent> Root;
 	
@@ -52,7 +54,7 @@ protected:
 	TObjectPtr<UStaticMeshComponent> Sight;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = Weapon)
-	TWeakObjectPtr<ATACCharacterBase> CurrentOwner;
+	TObjectPtr<ATACCharacterBase> CurrentOwner;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_WeaponInfo , Category = Info)
 	FTACWeaponInfo WeaponInfo;
@@ -62,11 +64,25 @@ protected:
 	
 	UPROPERTY()
 	uint8 CurrentFireModeIdx = 0;
+
+	UPROPERTY(EditAnywhere)
+	USoundCue* FireSoundCue;
+
+	UPROPERTY(BlueprintReadOnly)
+	UAudioComponent* FireAudioComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FName, int32> WeaponSoundList;
+
+	UPROPERTY(Replicated)
+	int32 CurrentWeaponSoundParam;
 	
 public:
 	void InitWeaponStat();
 
 	void UseAmmo();
+
+	void PlayFireAudio();
 
 	void Reload();
 	

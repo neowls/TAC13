@@ -1,48 +1,44 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Player/TACPlayerController.h"
-#include "GameData/TACStruct.h"
+#include "UI/TACLobbyWidget.h"
+#include "Interface/TACPlayerStateRequestInterface.h"
 #include "TACLobbyPlayerController.generated.h"
 
+class ATACLobbyGameState;
 class ATACLobbyPlayerState;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUpdatePlayerList, TArray<FLobbyPlayerInfo>, PlayerInfos);
-
 UCLASS()
-class TAC13_API ATACLobbyPlayerController : public ATACPlayerController
+class TAC13_API ATACLobbyPlayerController : public ATACPlayerController, public ITACPlayerStateRequestInterface
 {
 	GENERATED_BODY()
 	
 	ATACLobbyPlayerController(const FObjectInitializer& ObjectInitializer);
 	
 public:
-
-	virtual void BeginPlay() override;
-
+	virtual void PostInitializeComponents() override;
+	
+	virtual void BeforeSetUI() override;
+	
 	virtual void SetUIWidget() override;
-	
-	FOnUpdatePlayerList OnUpdatePlayerList;
-	
-	TObjectPtr<UTACUserWidget> LobbyWidget;
 
-	UFUNCTION(Client, Reliable)
-	void ClientUpdatePlayerList(const TArray<FLobbyPlayerInfo>& PlayerInfos);
+	virtual void ReceivedPlayer() override;
+	
+	virtual void RequestUpdatePlayerInfo() override;
+	
+	UFUNCTION(Server,Reliable)
+	void Server_RequestUpdatePlayerList();
 
 	UFUNCTION(Server, Reliable)
-	void ServerRequestServerPlayerListUpdate();
-
-	void RequestServerPlayerListUpdate();
-
-	UFUNCTION(BlueprintCallable)
-	void SetIsReadyState(bool NewReadyState);
-
-	UFUNCTION(Server, Reliable)
-	void ServerSetIsReadyState(bool NewReadyState);
+	void Server_ChangePlayerReadyState();
 
 protected:
-	TObjectPtr<ATACLobbyPlayerState> LobbyPlayerState;
-	
+	UPROPERTY()
+	TObjectPtr<UTACLobbyWidget> LobbyWidget;
+
+	UPROPERTY()
+	TObjectPtr<ATACLobbyGameState> LobbyGameState;
 };

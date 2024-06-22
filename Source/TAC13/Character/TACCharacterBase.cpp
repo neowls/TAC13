@@ -10,9 +10,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/DamageEvents.h"
-#include "Game/TACGameState.h"
-#include "Game/TACPlayerState.h"
-#include "Game/TACPlayGameState.h"
+#include "Game/Play/TACPlayGameMode.h"
+#include "Game/Play/TACPlayGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Input/TACControlData.h"
@@ -64,58 +63,84 @@ ATACCharacterBase::ATACCharacterBase(const FObjectInitializer& ObjectInitializer
 
 void ATACCharacterBase::PostInitializeComponents()
 {
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
 	Super::PostInitializeComponents();
 	Stat->OnHPZero.AddUObject(this, &ATACCharacterBase::SetDead);
 	BodyAnimInstance = Cast<UTACBodyAnimInstance>(GetMesh()->GetAnimInstance());
-}
-
-
-void ATACCharacterBase::HitConfirm(const FHitResult& HitResult)
-{
+	ArmAnimInstance = Cast<UTACArmAnimInstance>(ArmMesh->GetAnimInstance());
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Mesh Valid : %s"), GetMesh() ? TEXT("True") : TEXT("False"));
 	if(HasAuthority())
 	{
-		float PartDamageMultiplier;
-		if(HitResult.BoneName == TEXT("head")) PartDamageMultiplier = 2.5f;
-		else PartDamageMultiplier = 1.0f;
-		const float FireDamage = CurrentWeapon->GetWeaponInfo().Damage * PartDamageMultiplier;
-		FDamageEvent DamageEvent;
-		HitResult.GetActor()->TakeDamage(FireDamage, DamageEvent, GetController(), CurrentWeapon.Get());
+		SpawnWeapon("VAL");
+		SpawnWeapon("KA47");
+		SpawnWeapon("AR4");
 	}
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
 }
 
-
-
-float ATACCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+void ATACCharacterBase::PostNetInit()
 {
-	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	Stat->ApplyDamage(DamageAmount);
-	RecentAttacker = Cast<ATACPlayPlayerState>(EventInstigator->PlayerState);
-	RecentAttackedWeaponName = Cast<ATACWeapon>(DamageCauser)->GetWeaponName();
-	return DamageAmount;
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	Super::PostNetInit();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
 }
 
-void ATACCharacterBase::Tick(float DeltaSeconds)
+void ATACCharacterBase::PossessedBy(AController* NewController)
 {
-	Super::Tick(DeltaSeconds);
-	LOG_SCREEN(0, TEXT("Camera Height : %f"), FirstCamera->GetRelativeLocation().Z);
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	Super::PossessedBy(NewController);
+	InitAttachWeapons();
+	if(IsLocallyControlled()) ArmAnimInstance->SetNewSight();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
 }
 
-void ATACCharacterBase::SetDead()
+void ATACCharacterBase::OnRep_PlayerState()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("Character Dead"));
-	ATACPlayGameState* AGS = GetWorld()->GetGameState<ATACPlayGameState>();
-	if(HasAuthority())
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start : %s") , *GetName());
+	Super::OnRep_PlayerState();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End : %s"), *GetName());
+}
+
+void ATACCharacterBase::BeginPlay()
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	Super::BeginPlay();
+	if(IsLocallyControlled()) ArmAnimInstance->SetNewSight();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
+}
+
+void ATACCharacterBase::Destroyed()
+{
+	Super::Destroyed();
+	if(Stat)
 	{
-		AGS->AddKillLogEntry(RecentAttacker->GetPlayerName(), RecentAttackedWeaponName, GetPlayerState()->GetPlayerName());
+		Stat->OnHPChanged.Clear();		
 	}
-	BodyAnimInstance->StopAllMontages(0.0f);
-}
-
-void ATACCharacterBase::RespawnCharacter()
-{
 	
+
+	if(!OwnWeapons.IsEmpty())
+	{
+		for(const auto iter : OwnWeapons)
+		{
+			iter->Destroy();
+		}		
+	}
 }
 
+void ATACCharacterBase::PlayMontageAnimation(const TObjectPtr<UAnimMontage>& MontageToPlay)
+{
+	if(IsLocallyControlled())
+	{
+		ArmAnimInstance->StopAllMontages(0.0f);
+		ArmAnimInstance->Montage_Play(MontageToPlay);
+	}
+	else
+	{
+		BodyAnimInstance->StopAllMontages(0.0f);
+		BodyAnimInstance->Montage_Play(MontageToPlay);
+	}
+	GetCurrentWeapon()->PlayFireAudio();
+}
 
 void ATACCharacterBase::SetCharacterControlData(const UTACControlData* CharacterControlData)
 {
@@ -129,14 +154,38 @@ void ATACCharacterBase::SetCharacterControlData(const UTACControlData* Character
 void ATACCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
 	DOREPLIFETIME_CONDITION(ThisClass, bIsSprinting, COND_SimulatedOnly);
 	DOREPLIFETIME_CONDITION(ThisClass, bIsADS, COND_SimulatedOnly);
+	DOREPLIFETIME_CONDITION(ThisClass, CurrentWeaponIndex, COND_SkipOwner);
 	DOREPLIFETIME(ThisClass, bCanFire);
-	DOREPLIFETIME(ThisClass, CurrentWeaponIndex);
 	DOREPLIFETIME(ThisClass, OwnWeapons);
 }
 
+#pragma region RESPAWN
+
+void ATACCharacterBase::SetDead()
+{
+	if(HasAuthority())
+	{
+		ATACPlayGameState* AGS = GetWorld()->GetGameState<ATACPlayGameState>();
+		AGS->AddKillLogEntry(RecentAttacker->GetPlayerName(), RecentAttackedWeaponName, GetPlayerState()->GetPlayerName());
+	}
+	BodyAnimInstance->StopAllMontages(0.0f);
+}
+
+void ATACCharacterBase::RespawnCharacter()
+{
+	ATACPlayGameMode* TACGameMode = Cast<ATACPlayGameMode>(GetWorld()->GetAuthGameMode());
+	if(TACGameMode)
+	{
+		TACGameMode->RespawnPlayer(GetController());
+	}
+	Destroy();
+}
+
+#pragma endregion
+
+#pragma region ADS
 void ATACCharacterBase::OnRep_IsADS()
 {
 	if(TACCharacterMovement)
@@ -157,13 +206,16 @@ void ATACCharacterBase::OnRep_IsADS()
 
 void ATACCharacterBase::OnStartADS()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("begin"));
+	
 }
 
 void ATACCharacterBase::OnEndADS()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("begin"));
+	
 }
+#pragma endregion
+
+#pragma region HIT
 
 void ATACCharacterBase::FireHitCheck()
 {
@@ -183,134 +235,164 @@ void ATACCharacterBase::FireHitCheck()
 	}
 }
 
-#pragma region WEAPON
 
-void ATACCharacterBase::SpawnWeapon(const FName WeaponName)
-{
-	FActorSpawnParameters Params;
-	Params.Owner = this;
-	Params.Instigator = this;
-	ATACWeapon* SpawnedWeapon = GetWorld()->SpawnActor<ATACWeapon>(WeaponToSpawn, Params);
-	SpawnedWeapon->LoadWeaponInfoData(WeaponName);
-	SpawnedWeapon->SetOwner(this);
-	SpawnedWeapon->SetActorHiddenInGame(true);
-	AttachWeapon(SpawnedWeapon);
-	OwnWeapons.Add(SpawnedWeapon);
-}
 
-void ATACCharacterBase::AttachWeapon(ATACWeapon* TargetWeapon)
+void ATACCharacterBase::HitConfirm(const FHitResult& HitResult)
 {
-	if(IsLocallyControlled())
-	TargetWeapon->AttachToComponent(ArmMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("Grip"));
-	else
+	if(HasAuthority())
 	{
-		TargetWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("Grip"));
+		float PartDamageMultiplier;
+		if(HitResult.BoneName == TEXT("head")) PartDamageMultiplier = 2.5f;
+		else PartDamageMultiplier = 1.0f;
+		const float FireDamage = GetCurrentWeapon()->GetWeaponInfo().Damage * PartDamageMultiplier;
+		FDamageEvent DamageEvent;
+		HitResult.GetActor()->TakeDamage(FireDamage, DamageEvent, GetController(), GetCurrentWeapon().Get());
 	}
 }
 
-void ATACCharacterBase::DropWeapon()
+float ATACCharacterBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	OwnWeapons.Remove(CurrentWeapon.Get());
-	CurrentWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-	CurrentWeapon->GetMesh()->SetSimulatePhysics(true);
-	CurrentWeapon->GetMesh()->SetCollisionProfileName("Item");
-	ApplyWeaponChange(0);
-}
-
-void ATACCharacterBase::ReloadingWeapon()
-{
-	ServerReloadWeapon();
-}
-
-
-void ATACCharacterBase::CurrentWeaponCosmetic()
-{
-	PlayMontageAnimation(ChangeWeaponMontage);
-	CurrentWeapon->SetActorHiddenInGame(false);
-	OnCurrentAmmoChanged.Broadcast(CurrentWeapon->GetCurrentAmmo());
-	OnOwnAmmoChanged.Broadcast(CurrentWeapon->GetOwnAmmo());
-	OnWeaponNameChanged.Broadcast(CurrentWeapon->GetWeaponName());		
-}
-
-void ATACCharacterBase::OnRep_OwnWeapons()
-{
-	if(OwnWeapons.IsEmpty()) return;
-	for(const auto iter : OwnWeapons)
-	{
-		if(IsValid(iter))
-			AttachWeapon(iter);
-	}
-}
-
-void ATACCharacterBase::ServerReloadWeapon_Implementation()
-{
-	CurrentWeapon->Reload();
-}
-
-void ATACCharacterBase::ChangeWeapon(const int8& ChangeValue)
-{
-	const int8 ChangeIndex = OwnWeapons.IsValidIndex(CurrentWeaponIndex + ChangeValue) ? CurrentWeaponIndex + ChangeValue : (ChangeValue > 0 ? 0 : OwnWeapons.Num() - 1);
-	ApplyWeaponChange(ChangeIndex);
-	ServerChangeWeapon(ChangeIndex);
-}
-
-void ATACCharacterBase::ApplyWeaponChange(const uint8 NewWeaponIndex)
-{
-	if(!OwnWeapons.IsValidIndex(NewWeaponIndex) || CurrentWeapon == OwnWeapons[NewWeaponIndex]) return;
-	if(CurrentWeapon) CurrentWeapon->SetActorHiddenInGame(true);
-	CurrentWeaponIndex = NewWeaponIndex;
-	CurrentWeapon = OwnWeapons[NewWeaponIndex];
-	FireTime = 60 / CurrentWeapon->GetWeaponInfo().FireRate;
-	CurrentWeaponCosmetic();
-	ArmAnimInstance->SetNewSight();
-}
-
-
-void ATACCharacterBase::ChangeWeaponCheck()
-{
-	
-}
-
-void ATACCharacterBase::OnRep_CurrentWeaponIndex()
-{
-	ApplyWeaponChange(CurrentWeaponIndex);
-}
-
-void ATACCharacterBase::OnRep_CanFire()
-{
-	
-}
-
-void ATACCharacterBase::ServerChangeWeapon_Implementation(const uint8 Index)
-{
-	CurrentWeaponIndex = Index;
-	ApplyWeaponChange(Index);
-}
-
-
-void ATACCharacterBase::PlayMontageAnimation(const TObjectPtr<UAnimMontage>& MontageToPlay)
-{
-	if(IsLocallyControlled())
-	{
-
-		ArmAnimInstance->StopAllMontages(0.0f);
-		ArmAnimInstance->Montage_Play(MontageToPlay);
-	}
-	else
-	{
-		BodyAnimInstance->StopAllMontages(0.0f);
-		BodyAnimInstance->Montage_Play(MontageToPlay);
-	}
-}
-
-void ATACCharacterBase::ChangeFireMode()
-{
-	CurrentWeapon->ChangeFireMode();
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	Stat->ApplyDamage(DamageAmount);
+	RecentAttacker = Cast<ATACPlayPlayerState>(EventInstigator->PlayerState);
+	RecentAttackedWeaponName = Cast<ATACWeapon>(DamageCauser)->GetWeaponName();
+	return DamageAmount;
 }
 
 #pragma endregion
 
-#pragma region 웅크리기
+#pragma region WEAPON
+
+void ATACCharacterBase::SpawnWeapon(const FName WeaponName)
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.Instigator = GetInstigator();
+	ATACWeapon* SpawnedWeapon = GetWorld()->SpawnActor<ATACWeapon>(WeaponToSpawn, Params);
+	SpawnedWeapon->LoadWeaponInfoData(WeaponName);
+	SpawnedWeapon->SetOwner(this);
+	SpawnedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("Grip"));
+	SpawnedWeapon->SetActorHiddenInGame(true);
+	OwnWeapons.Add(SpawnedWeapon);
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
+}
+
+void ATACCharacterBase::InitAttachWeapons()
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	if(OwnWeapons.IsEmpty()) return;
+	for(const auto iter : OwnWeapons)
+	{
+		TAC_LOG(LogTACNetwork, Warning, TEXT("Weapon Valid : %s"), iter ? TEXT("True") : TEXT("False"));
+		if(IsValid(iter))
+		{
+			AttachWeapon(iter);
+			//iter->SetOwner(this);
+		}
+	}
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
+}
+
+void ATACCharacterBase::AttachWeapon(ATACWeapon* TargetWeapon) const
+{
+	if(IsLocallyControlled())
+	{
+		TAC_LOG(LogTACNetwork, Warning, TEXT("Attach to Arm"));
+		TargetWeapon->AttachToComponent(ArmMesh, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("Grip"));		
+	}
+	else
+	{
+		TAC_LOG(LogTACNetwork, Warning, TEXT("Attach to Mesh"));
+		TargetWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("Grip"));
+	}
+}
+
+void ATACCharacterBase::DropWeapon() // Need ServerSide Code
+{
+	GetCurrentWeapon()->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	GetCurrentWeapon()->GetMesh()->SetSimulatePhysics(true);
+	GetCurrentWeapon()->GetMesh()->SetCollisionProfileName("Item");
+	OwnWeapons.Remove(GetCurrentWeapon().Get());
+	EquipWeapon(0);
+}
+
+void ATACCharacterBase::ChangeWeapon(const int8& ChangeValue) // CHANGE
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	const int8 ChangeIndex = OwnWeapons.IsValidIndex(CurrentWeaponIndex + ChangeValue) ? CurrentWeaponIndex + ChangeValue : (ChangeValue > 0 ? 0 : OwnWeapons.Num() - 1);
+	EquipWeapon(ChangeIndex);
+}
+
+void ATACCharacterBase::EquipWeapon(const uint8 NewWeaponIndex) // EQUIP
+{
+	if(!OwnWeapons.IsValidIndex(NewWeaponIndex) || !OwnWeapons[CurrentWeaponIndex]) return;
+	PreviousWeaponIndex = CurrentWeaponIndex;
+	if(!HasAuthority())
+	{
+		CurrentWeaponIndex = NewWeaponIndex;
+		CurrentWeaponCosmetic();
+	}
+	
+	Server_SetWeaponIndex(NewWeaponIndex);
+}
+
+void ATACCharacterBase::Server_SetWeaponIndex_Implementation(const uint8 NewWeaponIndex)
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	CurrentWeaponIndex = NewWeaponIndex;
+	OnRep_CurrentWeaponIndex();
+}
+
+void ATACCharacterBase::CurrentWeaponCosmetic() // EQUIP COSMETIC
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	if(!OwnWeapons[PreviousWeaponIndex]) return;
+	OwnWeapons[PreviousWeaponIndex]->SetActorHiddenInGame(true);
+	PlayMontageAnimation(ChangeWeaponMontage);
+	GetCurrentWeapon()->SetActorHiddenInGame(false);
+	if(IsLocallyControlled())
+	{
+		OnCurrentAmmoChanged.Broadcast(GetCurrentWeapon()->GetCurrentAmmo());
+		OnOwnAmmoChanged.Broadcast(GetCurrentWeapon()->GetOwnAmmo());
+		OnWeaponNameChanged.Broadcast(GetCurrentWeapon()->GetWeaponName());
+		ArmAnimInstance->SetNewSight();
+	}
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
+}
+
+void ATACCharacterBase::OnRep_CurrentWeaponIndex()
+{
+	CurrentWeaponCosmetic();
+	PreviousWeaponIndex = CurrentWeaponIndex;
+}
+
+void ATACCharacterBase::OnRep_OwnWeapons()
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start : %s"), *GetName());
+	InitAttachWeapons();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End : %s"), *GetName());
+}
+
+void ATACCharacterBase::Server_ReloadWeapon_Implementation()
+{
+	GetCurrentWeapon()->Reload();
+}
+
+void ATACCharacterBase::ReloadingWeapon()
+{
+	Server_ReloadWeapon();
+}
+
+void ATACCharacterBase::ChangeFireMode()
+{
+	GetCurrentWeapon()->ChangeFireMode();
+}
+
+
+#pragma endregion
+
+#pragma region CROUCH
 void ATACCharacterBase::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
@@ -338,11 +420,9 @@ void ATACCharacterBase::UpdateCameraHeight()
 }
 #pragma endregion
 
-#pragma region 달리기
-
+#pragma region SPRINT
 void ATACCharacterBase::OnRep_IsSprinting()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("begin"));
 	if (TACCharacterMovement)
 	{
 		if (bIsSprinting)
@@ -359,28 +439,24 @@ void ATACCharacterBase::OnRep_IsSprinting()
 		}
 		TACCharacterMovement->bNetworkUpdateReceived = true;
 	}
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("end"));
+	
 }
 
 void ATACCharacterBase::Sprint()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	if (TACCharacterMovement)
 	{
 		TACCharacterMovement->bWantsToCrouch = false;
 		TACCharacterMovement->bWantsToSprint = true;
 	}
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
 void ATACCharacterBase::UnSprint()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	if (TACCharacterMovement)
 	{
 		TACCharacterMovement->bWantsToSprint = false;
 	}
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
 void ATACCharacterBase::OnEndSprint()
@@ -394,8 +470,3 @@ void ATACCharacterBase::OnStartSprint()
 }
 
 #pragma endregion 
-
-void ATACCharacterBase::SetupCharacterWidget(UTACUserWidget* InUserWidget)
-{
-
-}

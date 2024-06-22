@@ -3,10 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TACLobbyPlayerState.h"
 #include "Game/TACGameState.h"
 #include "TACLobbyGameState.generated.h"
 
-
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnUpdateLobbyPlayerListDelegate, TArray<ATACLobbyPlayerState*>& /*InLobbyPlayerList*/);
 
 /**
  * 
@@ -22,30 +23,33 @@ public:
 	UPROPERTY(Transient, BlueprintReadOnly, Category=GameMode)
 	TObjectPtr<class ATACLobbyGameMode> AuthTACLobbyGameMode;
 
+	FORCEINLINE const TArray<ATACLobbyPlayerState*>& GetLobbyPlayerArray() const { return LobbyPlayerArray; }
+
+	FOnUpdateLobbyPlayerListDelegate OnUpdatePlayerList;
+
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
 
 	virtual void RemovePlayerState(APlayerState* PlayerState) override;
 	
-
-	void UpdatePlayerInfos();
-	
+	UFUNCTION(BlueprintCallable)
 	bool IsAllPlayerReady();
 
-protected:
-	
-	virtual void PreInitializeComponents() override;
+	UFUNCTION(Server, Reliable)
+	void Server_RequestUpdatePlayerList();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SendUpdatePlayerList();
+
+	UFUNCTION()
+	void UpdatePlayerList();
+
+protected:
 	virtual void BeginPlay() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	TArray<struct FLobbyPlayerInfo> PlayerInfos;
 
-	UPROPERTY(ReplicatedUsing = OnRep_LobbyPlayerStates)
-	TArray<class ATACLobbyPlayerState*> LobbyPlayerStates;
-	
-	UFUNCTION()
-	void OnRep_LobbyPlayerStates();
+	UPROPERTY(Replicated)
+	TArray<ATACLobbyPlayerState*> LobbyPlayerArray;
 };
 
 

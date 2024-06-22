@@ -17,10 +17,24 @@ void ATACPlayPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME(ATACPlayPlayerState, PlayerScore);
 }
 
+void ATACPlayPlayerState::BeginPlay()
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start Owner : %s"), *GetName());
+	Super::BeginPlay();
+	PlayerScore.PlayerName = GetPlayerName();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End Owner : %s"), *GetName());
+}
+
 void ATACPlayPlayerState::OnRep_PlayerScore()
 {
 	TAC_LOG(LogTACNetwork, Log, TEXT("Kill Score : %d"), PlayerScore.KillScore);
 	TAC_LOG(LogTACNetwork, Log, TEXT("Death Score : %d"), PlayerScore.DeathScore);
+}
+
+void ATACPlayPlayerState::OnRep_PlayerName()
+{
+	Super::OnRep_PlayerName();
+	PlayerScore.PlayerName = GetPlayerName();
 }
 
 void ATACPlayPlayerState::AddKillScore()

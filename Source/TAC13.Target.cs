@@ -8,6 +8,7 @@ public class TAC13Target : TargetRules
 	public TAC13Target( TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Game;
+		bUsesSteam = true;
 		DefaultBuildSettings = BuildSettingsVersion.V2;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_1;
 		ExtraModuleNames.Add("TAC13");

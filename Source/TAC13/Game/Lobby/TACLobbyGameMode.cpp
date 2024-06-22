@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Game/TACLobbyGameMode.h"
+#include "TACLobbyGameMode.h"
 
 #include "TAC13.h"
 #include "TACLobbyGameState.h"
@@ -17,29 +17,28 @@ ATACLobbyGameMode::ATACLobbyGameMode()
 	PlayerStateClass = ATACLobbyPlayerState::StaticClass();
 }
 
+void ATACLobbyGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
 void ATACLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
-	ATACLobbyPlayerController* JoinPlayer = Cast<ATACLobbyPlayerController>(NewPlayer);
+	
 }
+
+
+void ATACLobbyGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+}
+
 
 void ATACLobbyGameMode::InitGameState()
 {
 	Super::InitGameState();
 	TACLobbyGameState = GetGameState<ATACLobbyGameState>();
 	TACLobbyGameState->AuthTACLobbyGameMode = this;
-	
 }
 
-/*
-void ATACLobbyGameMode::Logout(AController* Exiting)
-{
-	Super::Logout(Exiting);
-	ATACLobbyPlayerController* LobbyPlayer = Cast<ATACLobbyPlayerController>(Exiting);
-	if(LobbyPlayer)
-	{
-		ConnectedPlayers.Remove(LobbyPlayer);
-		UpdatePlayerInfos();
-	}
-}
-*/

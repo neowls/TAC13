@@ -16,10 +16,12 @@ class TAC13_API UTACUserWidget : public UUserWidget
 
 public:
 	FORCEINLINE void SetOwningActor(AActor* NewOwner) { OwningActor = NewOwner; }
+	FORCEINLINE void SetOwningWidget(UUserWidget* NewOwner) { OwningWidget = NewOwner; }
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Actor")
 	TObjectPtr<AActor> OwningActor;
 
-	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Widget")
+	TObjectPtr<UUserWidget> OwningWidget;
 };

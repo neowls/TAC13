@@ -2,9 +2,8 @@
 
 
 #include "TACGameMode.h"
-
-#include "TACLobbyGameState.h"
-#include "TACLobbyPlayerState.h"
+#include "TACGameState.h"
+#include "TACPlayerState.h"
 #include "Character/TACLobbyPawn.h"
 #include "Player/TACLobbyPlayerController.h"
 

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Game/TACGameState.h"
+#include "GameData/TACStruct.h"
 #include "TACPlayGameState.generated.h"
 
 /**

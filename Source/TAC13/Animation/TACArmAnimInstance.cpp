@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "TACArmAnimInstance.h"
+
+#include "TAC13.h"
 #include "Camera/CameraComponent.h"
 #include "Character/TACCharacterPlayer.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -14,8 +16,10 @@ UTACArmAnimInstance::UTACArmAnimInstance()
 void UTACArmAnimInstance::NativeBeginPlay()
 {
 	Super::NativeBeginPlay();
+	UE_LOG(LogTACNetwork, Warning, TEXT("Arm BeginPlay Start"));
 	OwnerPlayer = CastChecked<ATACCharacterPlayer>(Owner);
-	SetNewSight();
+	FTimerHandle TSetNewSight;
+	GetWorld()->GetTimerManager().SetTimer(TSetNewSight,this, &UTACArmAnimInstance::SetSightTransform, .2f, false);
 }
 
 void UTACArmAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -38,6 +42,7 @@ void UTACArmAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 
 void UTACArmAnimInstance::SetNewSight()
 {
+	UE_LOG(LogTACNetwork, Warning, TEXT("Arm SetNewSight Start"));
 	if(!OwnerPlayer) return;
 	FTimerHandle TSetSightTransform;
 	FTimerHandle TSetRelativeHandTransform;
@@ -63,7 +68,7 @@ void UTACArmAnimInstance::SetRelativeHandTransform()
 
 void UTACArmAnimInstance::SetLeftHandTransform()
 {
-	if(!OwnerPlayer->CurrentWeapon) return;
+	if(!OwnerPlayer->GetCurrentWeapon()) return;
 	const FTransform ArmMeshTransform = OwnerPlayer->GetArmMesh()->GetSocketTransform(FName("hand_r"));
 	const FTransform LeftHandSocketTransform = OwnerPlayer->GetLeftHandTransform();
 	LeftHandTransform  = UKismetMathLibrary::MakeRelativeTransform(LeftHandSocketTransform,ArmMeshTransform);

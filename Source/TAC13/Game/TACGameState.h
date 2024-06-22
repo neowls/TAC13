@@ -3,9 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "TACGameMode.h"
 #include "GameFramework/GameState.h"
-#include "GameData/TACStruct.h"
 #include "TACGameState.generated.h"
 
 UCLASS()

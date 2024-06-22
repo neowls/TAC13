@@ -10,11 +10,12 @@
 #include "Animation/TACAnimInstance.h"
 #include "Animation/TACArmAnimInstance.h"
 #include "Camera/CameraComponent.h"
-#include "Game/TACPlayerState.h"
-#include "Game/TACPlayGameMode.h"
+#include "Game/Play/TACPlayGameMode.h"
 #include "GameFramework/GameStateBase.h"
 #include "Input/TACControlData.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
+#include "Player/TACPlayPlayerController.h"
 #include "UI/TACHUDWidget.h"
 #include "Weapon/TACWeapon.h"
 
@@ -77,53 +78,26 @@ ATACCharacterPlayer::ATACCharacterPlayer(const FObjectInitializer& ObjectInitial
 void ATACCharacterPlayer::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-	ArmAnimInstance = Cast<UTACArmAnimInstance>(ArmMesh->GetAnimInstance());
 }
 
 
 void ATACCharacterPlayer::BeginPlay()
 {
 	Super::BeginPlay();
-	if(IsLocallyControlled())
-	{
-		FireMontage = FireArmMontage;
-		ChangeWeaponMontage = ChangeWeaponArmMontage.Get();
-	}
-	SetCharacterControl(PlayControlData);
-	if(HasAuthority())
-	{
-		SpawnWeapon("VAL");
-		SpawnWeapon("KA47");
-		SpawnWeapon("AR4");
-		ApplyWeaponChange(0);
-	}
 }
 
 void ATACCharacterPlayer::Destroyed()
 {
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
 	Super::Destroyed();
-	if(CurrentWeapon)
-	{
-		CurrentWeapon->Destroy();
-		for(const auto iter : OwnWeapons) iter->Destroy();		
-	}
 }
 
-void ATACCharacterPlayer::PossessedBy(AController* NewController)
-{
-	Super::PossessedBy(NewController);
-
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-	{
-		EnableInput(PlayerController);
-	}
-	
-}
 
 void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
+	
 	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
 
 	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::Fire);
@@ -141,52 +115,57 @@ void ATACCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 	EnhancedInputComponent->BindAction(ScoreboardAction, ETriggerEvent::Triggered, this, &ATACCharacterPlayer::ShowScoreboard);
+	
+	InitLocalRoleProperty();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
 }
 void ATACCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void ATACCharacterPlayer::InitLocalRoleProperty()
+{
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
+	SetCharacterControl(PlayControlData);
+	FireMontage = FireArmMontage;
+	ChangeWeaponMontage = ChangeWeaponArmMontage.Get();
+	InitAttachWeapons();
+	EquipWeapon(0);
+	SetupHUDWidget();
+}
+
+
 #pragma region HIT
+
 
 void ATACCharacterPlayer::SetDead()
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	Super::SetDead();
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
 	if(HasAuthority())
-	Cast<ATACPlayGameMode>(GetWorld()->GetAuthGameMode())->AddPlayerScore(RecentAttacker, Cast<ATACPlayPlayerState>(Controller->PlayerState));
+	{
+		Cast<ATACPlayGameMode>(GetWorld()->GetAuthGameMode())->AddPlayerScore(RecentAttacker, Cast<ATACPlayPlayerState>(Controller->PlayerState));
+		GetWorldTimerManager().SetTimer(RespawnTimer, this, &ATACCharacterPlayer::RespawnCharacter, RespawnDelayTime, false);
+	}
 	
-	SetCharacterControl(SpectateControlData);
 	GetCapsuleComponent()->SetCollisionProfileName(TEXT("DeadPawn"));
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
 	GetMesh()->SetSimulatePhysics(true);
-	GetMesh()->SetOwnerNoSee(false);
-	ArmMesh->SetOwnerNoSee(true);
-	CurrentWeapon->SetActorHiddenInGame(true);
-	GetWorldTimerManager().SetTimer(RespawnTimer, this, &ATACCharacterPlayer::RespawnCharacter, RespawnDelayTime, false);
-	TAC_LOG(LogTACNetwork, Log, TEXT("%s"), TEXT("End"));
+	
+	if(IsLocallyControlled())
+	{
+		SetCharacterControl(SpectateControlData);
+		GetCurrentWeapon()->SetActorHiddenInGame(true);
+		GetMesh()->SetOwnerNoSee(false);
+		ArmMesh->SetOwnerNoSee(true);
+	}
 }
 
 void ATACCharacterPlayer::RespawnCharacter()
 {
 	Super::RespawnCharacter();
-	GetMesh()->SetSimulatePhysics(false);
-	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
-	GetMesh()->AttachToComponent(GetCapsuleComponent(),FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true));
-	GetMesh()->SetRelativeLocationAndRotation(FVector(0.0f, 0.0f, -90.0f), FRotator(0.0f, -90.0f, 0.0f));
-	if(HasAuthority())
-	{
-		Stat->SetHP(100);
-		for(const auto iter : OwnWeapons)
-		{
-			iter->InitWeaponStat();
-		}
-	}
-	GetMesh()->SetOwnerNoSee(true);
-	ArmMesh->SetOwnerNoSee(false);
-	CurrentWeapon->SetActorHiddenInGame(false);
-	GetCapsuleComponent()->SetCollisionProfileName(TEXT("Pawn"));
-	SetCharacterControl(PlayControlData);
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
 }
 
 
@@ -214,6 +193,7 @@ void ATACCharacterPlayer::SetCharacterControl(TObjectPtr<UTACControlData> InChar
 	{
 		return;
 	}
+	
 	CurrentControlData = InCharacterControlData;
 	
 	SetCharacterControlData(CurrentControlData);
@@ -234,6 +214,7 @@ void ATACCharacterPlayer::SetCharacterControlData(const UTACControlData* Charact
 	Super::SetCharacterControlData(CharacterControlData);
 }
 
+
 #pragma endregion 
 
 #pragma region FIRE
@@ -245,7 +226,7 @@ void ATACCharacterPlayer::Fire(const FInputActionValue& Value)
 		if(!HasAuthority())
 		{
 			bCanFire = false;
-			GetWorldTimerManager().SetTimer(FireTimerHandle, this, &ATACCharacterPlayer::ResetFire, FireTime, false);
+			GetWorldTimerManager().SetTimer(FireTimerHandle, this, &ATACCharacterPlayer::ResetFire, FireTime(), false);
 			PlayMontageAnimation(FireMontage);
 		}
 		ServerRPCFire(GetWorld()->GetGameState()->GetServerWorldTimeSeconds());
@@ -260,7 +241,7 @@ void ATACCharacterPlayer::ResetFire()
 
 bool ATACCharacterPlayer::IsCanFire() const
 {
-	if(bIsSprinting || CurrentWeapon->GetWeaponStat().CurrentAmmo <= 0) return false;
+	if(bIsSprinting || GetCurrentWeapon()->GetWeaponStat().CurrentAmmo <= 0) return false;
 	return true;
 }
 
@@ -305,12 +286,12 @@ void ATACCharacterPlayer::SetRecoilPoint()
 void ATACCharacterPlayer::ServerRPCFire_Implementation(float FireStartTime)
 {
 	bCanFire = false;
-	CurrentWeapon->UseAmmo();
+	GetCurrentWeapon()->UseAmmo();
 
 	FireTimeDifference = GetWorld()->GetTimeSeconds() - FireStartTime;
-	FireTimeDifference = FMath::Clamp(FireTimeDifference, 0.0f, FireTime - 0.01f);
+	FireTimeDifference = FMath::Clamp(FireTimeDifference, 0.0f, FireTime() - 0.01f);
 
-	GetWorldTimerManager().SetTimer(FireTimerHandle, this, &ATACCharacterPlayer::ResetFire, FireTime - FireTimeDifference, false);
+	GetWorldTimerManager().SetTimer(FireTimerHandle, this, &ATACCharacterPlayer::ResetFire, FireTime() - FireTimeDifference, false);
 
 	LastFireStartTime = FireStartTime;
 	PlayMontageAnimation(FireMontage);
@@ -333,7 +314,6 @@ void ATACCharacterPlayer::MulticastRPCFire_Implementation()
 #pragma endregion 
 
 #pragma region INPUT
-
 
 void ATACCharacterPlayer::Move(const FInputActionValue& Value)
 {
@@ -412,21 +392,26 @@ void ATACCharacterPlayer::ChangeFireMode()
 
 #pragma region WIDGET
 
-void ATACCharacterPlayer::SetupHUDWidget(UTACHUDWidget* InHUDWidget)
+void ATACCharacterPlayer::SetupHUDWidget()
 {
-	if(InHUDWidget)
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Controller : %s"), *GetController()->GetName())
+	if(UTACHUDWidget* InHUDWidget = GetController<ATACPlayPlayerController>()->GetTACHUDWidget())
 	{
 		InHUDWidget->UpdateHPBar(Stat->GetCurrentHP());
-		InHUDWidget->UpdateCurrentAmmo(0);
-		InHUDWidget->UpdateOwnAmmo(0);
-		InHUDWidget->UpdateWeaponName(TEXT("--"));
+		InHUDWidget->UpdateCurrentAmmo(GetCurrentWeapon()->GetCurrentAmmo());
+		InHUDWidget->UpdateOwnAmmo(GetCurrentWeapon()->GetOwnAmmo());
+		InHUDWidget->UpdateWeaponName(GetCurrentWeapon()->GetWeaponName());
 		Stat->OnHPChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateHPBar);
 		OnCurrentAmmoChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateCurrentAmmo);
 		OnOwnAmmoChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateOwnAmmo);
 		OnWeaponNameChanged.AddUObject(InHUDWidget, &UTACHUDWidget::UpdateWeaponName);
 		OnScoreboardChanged.AddUObject(InHUDWidget, &UTACHUDWidget::ScoreBoardOnOff);
 	}
+
 }
+
+
+
 
 void ATACCharacterPlayer::ShowScoreboard(const FInputActionValue& Value)
 {

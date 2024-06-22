@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//
 
 #pragma once
 
@@ -18,12 +18,16 @@ public:
 
 	ATACPlayPlayerController();
 
-	FORCEINLINE class UTACHUDWidget* GetTACHUDWidget() { return TACHUDWidget; }
+	FORCEINLINE class UTACHUDWidget* GetTACHUDWidget() const { return TACHUDWidget; }
 
 protected:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void SetUIWidget() override;
+	virtual void SetHUDWidget();
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void PostNetInit() override;
+	virtual void OnRep_Owner() override;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = HUD)
 	TSubclassOf<class UTACHUDWidget> TACHUDWidgetClass;

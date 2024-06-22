@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//
 
 #pragma once
 
@@ -19,9 +19,13 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void BeforeSetUI();
+
 	virtual void PostInitializeComponents() override;
 
 	virtual void SetUIWidget();
+
+	virtual void OnPossess(APawn* InPawn) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = HUD)
 	TSubclassOf<class UTACUserWidget> UIWidgetClass;

@@ -21,6 +21,8 @@ public class TAC13 : ModuleRules
 			"NavigationSystem", 
 			"AIModule", 
 			"GameplayTasks",
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "AnimGraphRuntime" });
@@ -29,9 +31,7 @@ public class TAC13 : ModuleRules
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 		
 		// Uncomment if you are using online features
-		PrivateDependencyModuleNames.Add("OnlineSubsystem");
-		PrivateDependencyModuleNames.Add("OnlineSubsystemSteam");
-		
+		DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
 
 		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
 		

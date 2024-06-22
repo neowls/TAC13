@@ -6,6 +6,13 @@
 
 ATACWeapon::ATACWeapon()
 {
+	static ConstructorHelpers::FObjectFinder<USoundCue> FireCueRef(TEXT("/Script/Engine.SoundCue'/Game/_TAC/Sound/FireSound_Cue.FireSound_Cue'"));
+
+	if(FireCueRef.Object)
+	{
+		FireSoundCue = FireCueRef.Object;
+	}
+	
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
 	
@@ -16,6 +23,11 @@ ATACWeapon::ATACWeapon()
 	Sight = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Optic"));
 	Sight->SetupAttachment(Mesh, "Sight");
 	Sight->CastShadow = false;
+
+	FireAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("FireAudioComp"));
+	FireAudioComponent->bAutoActivate = false;
+	FireAudioComponent->bCanPlayMultipleInstances = true;
+	FireAudioComponent->SetupAttachment(RootComponent);
 
 	bReplicates = true;
 }
@@ -41,12 +53,27 @@ void ATACWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ATACWeapon, WeaponInfo);
 	DOREPLIFETIME(ATACWeapon, WeaponStat);
+	DOREPLIFETIME(ATACWeapon, CurrentWeaponSoundParam);
+}
+
+void ATACWeapon::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	WeaponSoundList = { {TEXT("VAL"), 0}, {TEXT("AR4"), 1}, {TEXT("KA47"), 2} };
+	if(FireSoundCue->IsValidLowLevelFast())
+	{
+		FireAudioComponent->SetSound(FireSoundCue);
+	}
 }
 
 void ATACWeapon::BeginPlay()
 {
+	TAC_LOG(LogTACNetwork, Warning, TEXT("Start"));
 	Super::BeginPlay();
+	
+	TAC_LOG(LogTACNetwork, Warning, TEXT("End"));
 }
+
 
 void ATACWeapon::InitWeaponStat()
 {
@@ -61,6 +88,11 @@ void ATACWeapon::UseAmmo()
 	WeaponStat.CurrentAmmo--;
 	TAC_LOG(LogTACNetwork, Log, TEXT("Current Ammo : %d"), WeaponStat.CurrentAmmo);
 	CurrentOwner->OnCurrentAmmoChanged.Broadcast(WeaponStat.CurrentAmmo);
+}
+
+void ATACWeapon::PlayFireAudio()
+{
+	FireAudioComponent->Play();
 }
 
 void ATACWeapon::Reload()
@@ -83,9 +115,9 @@ void ATACWeapon::Reload()
 
 void ATACWeapon::LoadWeaponInfoData(const FName InName)
 {
-	TAC_LOG(LogTACNetwork, Log, TEXT("Begin"));
 	WeaponInfo = UTACGameSingleton::Get().GetWeaponInfoData(InName);
 	WeaponInfo.Name = InName.ToString();
+	CurrentWeaponSoundParam = *WeaponSoundList.Find(InName);
 	OnRep_WeaponInfo();
 	InitWeaponStat();
 }
@@ -93,10 +125,12 @@ void ATACWeapon::LoadWeaponInfoData(const FName InName)
 void ATACWeapon::OnRep_WeaponInfo()
 {
 	Mesh->SetSkeletalMesh(WeaponInfo.BodyMesh);
+	FireAudioComponent->SetIntParameter(TEXT("GunType"), CurrentWeaponSoundParam);
 }
 
 void ATACWeapon::OnRep_WeaponStat()
 {
+	if(!CurrentOwner) return;
 	CurrentOwner->OnCurrentAmmoChanged.Broadcast(WeaponStat.CurrentAmmo);
 	CurrentOwner->OnOwnAmmoChanged.Broadcast(WeaponStat.OwnAmmo);
 }
